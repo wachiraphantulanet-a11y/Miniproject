@@ -4,6 +4,8 @@ const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const roleRoutes = require('./routes/roleRoutes');
+const varietyRoutes = require('./routes/varietyRoutes');
+const parentTreeRoutes = require('./routes/parentTreeRoutes');
 
 const app = express();
 
@@ -18,6 +20,8 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/varieties', varietyRoutes);
+app.use('/api/parent-trees', parentTreeRoutes);
 
 // 404 handler — route ที่ไม่ตรงกับอะไรเลย
 app.use((req, res) => {
