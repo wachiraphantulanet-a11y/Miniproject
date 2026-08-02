@@ -9,6 +9,8 @@ const parentTreeRoutes = require('./routes/parentTreeRoutes');
 const breedingPlanRoutes = require('./routes/breedingPlanRoutes');
 const pollinationRoutes = require('./routes/pollinationRoutes');
 const fruitSetRoutes = require('./routes/fruitSetRoutes');
+const seedRoutes = require('./routes/seedRoutes');
+const seedlingRoutes = require('./routes/seedlingRoutes');
 
 const app = express();
 
@@ -28,6 +30,8 @@ app.use('/api/parent-trees', parentTreeRoutes);
 app.use('/api/breeding-plans', breedingPlanRoutes);
 app.use('/api/pollinations', pollinationRoutes);
 app.use('/api/fruit-sets', fruitSetRoutes);
+app.use('/api/seeds', seedRoutes);
+app.use('/api/seedlings', seedlingRoutes);
 
 // 404 handler — route ที่ไม่ตรงกับอะไรเลย
 app.use((req, res) => {
