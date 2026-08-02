@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 
@@ -20,6 +21,9 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// เสิร์ฟไฟล์ frontend (SPA แบบ hash routing — ไม่ต้องมี route แยกฝั่ง server)
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Health check — ใช้เช็คว่า server และ DB พร้อมทำงานหรือไม่
 app.get('/api/health', (req, res) => {
