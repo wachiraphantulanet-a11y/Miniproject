@@ -7,6 +7,8 @@ const roleRoutes = require('./routes/roleRoutes');
 const varietyRoutes = require('./routes/varietyRoutes');
 const parentTreeRoutes = require('./routes/parentTreeRoutes');
 const breedingPlanRoutes = require('./routes/breedingPlanRoutes');
+const pollinationRoutes = require('./routes/pollinationRoutes');
+const fruitSetRoutes = require('./routes/fruitSetRoutes');
 
 const app = express();
 
@@ -24,6 +26,8 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/varieties', varietyRoutes);
 app.use('/api/parent-trees', parentTreeRoutes);
 app.use('/api/breeding-plans', breedingPlanRoutes);
+app.use('/api/pollinations', pollinationRoutes);
+app.use('/api/fruit-sets', fruitSetRoutes);
 
 // 404 handler — route ที่ไม่ตรงกับอะไรเลย
 app.use((req, res) => {
