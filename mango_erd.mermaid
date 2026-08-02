@@ -1,0 +1,143 @@
+erDiagram
+    ROLES ||--o{ USERS : "มี"
+    USERS ||--o{ MANGO_VARIETIES : "บันทึกโดย"
+    USERS ||--o{ PARENT_TREES : "บันทึกโดย"
+    USERS ||--o{ BREEDING_PLANS : "สร้างโดย"
+    USERS ||--o{ BREEDING_PLAN_APPROVALS : "อนุมัติโดย"
+    USERS ||--o{ POLLINATION_RECORDS : "บันทึกโดย"
+    USERS ||--o{ FRUIT_SET_RECORDS : "บันทึกโดย"
+    USERS ||--o{ SEEDS : "บันทึกโดย"
+    USERS ||--o{ CARE_RECORDS : "บันทึกโดย"
+    USERS ||--o{ PEST_DISEASE_RECORDS : "บันทึกโดย"
+    USERS ||--o{ QUALITY_EVALUATIONS : "ประเมินโดย"
+    USERS ||--o{ QUALITY_EVALUATION_APPROVALS : "อนุมัติโดย"
+    USERS ||--o{ ACTIVITY_LOGS : "กระทำโดย"
+
+    MANGO_VARIETIES ||--o{ PARENT_TREES : "เป็นพันธุ์ของ"
+
+    PARENT_TREES ||--o{ BREEDING_PLANS : "เป็นต้นพ่อพันธุ์ใน"
+    PARENT_TREES ||--o{ BREEDING_PLANS : "เป็นต้นแม่พันธุ์ใน"
+
+    BREEDING_PLANS ||--o{ BREEDING_PLAN_APPROVALS : "มีประวัติอนุมัติ"
+    BREEDING_PLANS ||--o{ POLLINATION_RECORDS : "ดำเนินการผสมเกสรตาม"
+
+    POLLINATION_RECORDS ||--o{ FRUIT_SET_RECORDS : "ติดผลจาก"
+    FRUIT_SET_RECORDS ||--o{ SEEDS : "เก็บเมล็ดจาก"
+    SEEDS ||--o{ SEEDLINGS : "เพาะเป็น"
+
+    SEEDLINGS ||--o{ CARE_RECORDS : "มีบันทึกการดูแล"
+    SEEDLINGS ||--o{ PEST_DISEASE_RECORDS : "พบปัญหา"
+    CARE_RECORDS ||--o{ PEST_DISEASE_RECORDS : "อาจพบปัญหาระหว่างดูแล"
+    SEEDLINGS ||--o{ QUALITY_EVALUATIONS : "ถูกประเมิน"
+    QUALITY_EVALUATIONS ||--o{ QUALITY_EVALUATION_APPROVALS : "มีประวัติอนุมัติ"
+
+    ROLES {
+        int role_id PK
+        varchar role_name
+    }
+    USERS {
+        int user_id PK
+        varchar username
+        varchar password_hash
+        varchar full_name
+        int role_id FK
+        enum status
+    }
+    MANGO_VARIETIES {
+        int variety_id PK
+        varchar variety_name
+        varchar taste
+        varchar color
+        int harvest_days
+        int created_by FK
+    }
+    PARENT_TREES {
+        int tree_id PK
+        varchar tree_code
+        enum tree_type
+        int variety_id FK
+        date planted_date
+        enum status
+        int created_by FK
+    }
+    BREEDING_PLANS {
+        int plan_id PK
+        varchar plan_code
+        int father_tree_id FK
+        int mother_tree_id FK
+        varchar objective
+        enum status
+        int created_by FK
+    }
+    BREEDING_PLAN_APPROVALS {
+        int approval_id PK
+        int plan_id FK
+        enum decision
+        text reason
+        int decided_by FK
+    }
+    POLLINATION_RECORDS {
+        int pollination_id PK
+        int plan_id FK
+        date pollination_date
+        int flower_count
+        int recorded_by FK
+    }
+    FRUIT_SET_RECORDS {
+        int fruit_set_id PK
+        int pollination_id FK
+        int fruit_count
+        decimal fruit_set_rate
+        int recorded_by FK
+    }
+    SEEDS {
+        int seed_id PK
+        int fruit_set_id FK
+        int seed_count
+        varchar quality_grade
+        int recorded_by FK
+    }
+    SEEDLINGS {
+        int seedling_id PK
+        int seed_id FK
+        varchar seedling_code
+        date germination_date
+        enum current_status
+    }
+    CARE_RECORDS {
+        int care_id PK
+        int seedling_id FK
+        date care_date
+        decimal height_cm
+        int recorded_by FK
+    }
+    PEST_DISEASE_RECORDS {
+        int record_id PK
+        int seedling_id FK
+        int care_id FK
+        enum issue_type
+        enum severity
+        enum status
+        int recorded_by FK
+    }
+    QUALITY_EVALUATIONS {
+        int evaluation_id PK
+        int seedling_id FK
+        decimal overall_score
+        enum overall_grade
+        enum status
+        int evaluated_by FK
+    }
+    QUALITY_EVALUATION_APPROVALS {
+        int approval_id PK
+        int evaluation_id FK
+        enum decision
+        text reason
+        int decided_by FK
+    }
+    ACTIVITY_LOGS {
+        bigint log_id PK
+        int user_id FK
+        varchar action
+        varchar table_name
+    }
