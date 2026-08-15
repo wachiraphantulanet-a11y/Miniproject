@@ -6,50 +6,61 @@ frontend — ครอบคลุมครบทั้ง 8 process ตาม D
 ## โครงสร้างโปรเจกต์
 ```
 Miniproject/
-├── src/                                # Backend
-│   ├── config/db.js                    # MySQL connection pool
-│   ├── middleware/authMiddleware.js    # ตรวจ JWT + RBAC (authenticate, authorize)
-│   ├── controllers/
-│   │   ├── authController.js           # login, me                         (Process 1, D1)
-│   │   ├── userController.js           # CRUD ผู้ใช้งาน (admin เท่านั้น)      (Process 1, D1)
-│   │   ├── roleController.js           # ดึงรายการ role
-│   │   ├── varietyController.js        # CRUD พันธุ์มะม่วง                   (Process 2, D2)
-│   │   ├── parentTreeController.js     # CRUD ต้นพ่อ-แม่พันธุ์                (Process 2, D3)
-│   │   ├── breedingPlanController.js   # แผนการเพาะพันธุ์ + อนุมัติ/ปฏิเสธ    (Process 3, D4)
-│   │   ├── pollinationController.js    # บันทึกการผสมเกสร                    (Process 4, D5)
-│   │   ├── fruitSetController.js       # บันทึกการติดผล                      (Process 4, D5)
-│   │   ├── seedController.js           # บันทึกเมล็ดพันธุ์                    (Process 5, D6)
-│   │   ├── seedlingController.js       # บันทึกต้นกล้า                       (Process 5, D6)
-│   │   ├── careController.js           # บันทึกการดูแล/เจริญเติบโต            (Process 6, D7)
-│   │   ├── pestDiseaseController.js    # บันทึกปัญหาโรค/แมลง                 (Process 6, D8)
-│   │   ├── qualityEvaluationController.js # ประเมินคุณภาพ + อนุมัติ/ปฏิเสธ    (Process 7, D9)
-│   │   └── reportController.js         # รายงาน/สรุปข้อมูล                   (Process 8)
-│   ├── routes/                         # ผูก route กับ controller (ไฟล์ละ 1 resource)
-│   ├── utils/
-│   │   ├── token.js                    # sign/verify JWT
-│   │   └── activityLog.js              # เขียน audit trail ลง activity_logs
-│   ├── scripts/seedAdmin.js            # ตั้งรหัสผ่านจริงให้ user 'admin' ครั้งแรก
-│   ├── app.js                          # ตั้งค่า Express app + route ทั้งหมด + serve frontend
-│   └── server.js                       # จุดเริ่มรัน server
-├── public/                             # Frontend (static, SPA ด้วย hash routing)
+├── backend/                            # REST API (มี package.json ของตัวเอง)
+│   ├── src/
+│   │   ├── config/db.js                # MySQL connection pool
+│   │   ├── middleware/authMiddleware.js # ตรวจ JWT + RBAC (authenticate, authorize)
+│   │   ├── controllers/
+│   │   │   ├── authController.js           # login, me                         (Process 1, D1)
+│   │   │   ├── userController.js           # CRUD ผู้ใช้งาน (admin เท่านั้น)      (Process 1, D1)
+│   │   │   ├── roleController.js           # ดึงรายการ role
+│   │   │   ├── varietyController.js        # CRUD พันธุ์มะม่วง                   (Process 2, D2)
+│   │   │   ├── parentTreeController.js     # CRUD ต้นพ่อ-แม่พันธุ์                (Process 2, D3)
+│   │   │   ├── breedingPlanController.js   # แผนการเพาะพันธุ์ + อนุมัติ/ปฏิเสธ    (Process 3, D4)
+│   │   │   ├── pollinationController.js    # บันทึกการผสมเกสร                    (Process 4, D5)
+│   │   │   ├── fruitSetController.js       # บันทึกการติดผล                      (Process 4, D5)
+│   │   │   ├── seedController.js           # บันทึกเมล็ดพันธุ์                    (Process 5, D6)
+│   │   │   ├── seedlingController.js       # บันทึกต้นกล้า                       (Process 5, D6)
+│   │   │   ├── careController.js           # บันทึกการดูแล/เจริญเติบโต            (Process 6, D7)
+│   │   │   ├── pestDiseaseController.js    # บันทึกปัญหาโรค/แมลง                 (Process 6, D8)
+│   │   │   ├── qualityEvaluationController.js # ประเมินคุณภาพ + อนุมัติ/ปฏิเสธ    (Process 7, D9)
+│   │   │   ├── reportController.js         # รายงาน/สรุปข้อมูล                   (Process 8)
+│   │   │   └── activityLogController.js    # ดู audit trail
+│   │   ├── routes/                     # ผูก route กับ controller (ไฟล์ละ 1 resource)
+│   │   ├── utils/
+│   │   │   ├── token.js                # sign/verify JWT
+│   │   │   └── activityLog.js          # เขียน audit trail ลง activity_logs
+│   │   ├── scripts/seedAdmin.js        # ตั้งรหัสผ่านจริงให้ user 'admin' ครั้งแรก
+│   │   ├── app.js                      # ตั้งค่า Express app + route ทั้งหมด (ไม่ serve frontend)
+│   │   └── server.js                   # จุดเริ่มรัน server
+│   ├── schema.sql                      # โครงสร้างฐานข้อมูล MySQL (D1–D9 + audit log)
+│   ├── .env.example
+│   └── package.json                    # npm run dev / npm start อยู่ที่นี่
+├── frontend/                           # Static SPA แยกจาก backend (ไม่มี build tool/package.json)
 │   ├── index.html                      # app shell เดียว ทุกหน้าโหลดผ่านนี้
 │   ├── css/style.css
 │   └── js/
+│       ├── config.js                   # กำหนด API_BASE_URL ให้ชี้ไปที่ backend
 │       ├── api.js                      # fetch wrapper แนบ JWT + จัดการ error กลาง
 │       ├── auth.js                     # login/logout, เก็บ token ใน localStorage
 │       ├── router.js                   # hash-based router
 │       ├── crud.js                     # generic list+form component ใช้ซ้ำกับหลาย resource
 │       ├── app.js                      # จุดเริ่มของ frontend: nav + ผูก route ทั้งหมด
 │       └── views/                      # ฟังก์ชัน render ของแต่ละหน้า
-├── schema.sql                          # โครงสร้างฐานข้อมูล MySQL (D1–D9 + audit log)
-├── .env.example
-└── package.json
+└── README.md
 ```
 
 ## วิธีติดตั้งและรัน
 
-1. ติดตั้ง dependency
+โปรเจกต์แยกเป็น 2 ส่วนอิสระ **backend มี `npm run dev` ของตัวเอง ส่วน frontend เป็นไฟล์ static ล้วนๆ
+ไม่มี `package.json`/`npm run dev`** — ถ้ารัน `npm install` หรือ `npm run dev` ที่ root ของ repo หรือใน
+`frontend/` จะ error `ENOENT: ... package.json` เพราะไม่มีไฟล์นั้นอยู่
+
+### 1) Backend (REST API)
+
+1. ติดตั้ง dependency (ต้องอยู่ในโฟลเดอร์ `backend/`)
    ```
+   cd backend
    npm install
    ```
 
@@ -66,13 +77,22 @@ Miniproject/
    npm run seed:admin -- Admin@12345
    ```
 
-4. รัน server (ให้บริการทั้ง REST API และไฟล์ frontend ใน `public/` จาก server เดียวกัน)
+4. รัน server (serve เฉพาะ REST API เท่านั้น — ไม่ serve ไฟล์ frontend แล้ว)
    ```
    npm run dev     # โหมด dev (auto reload ด้วย nodemon)
    npm start        # โหมด production
    ```
    ถ้าเชื่อมต่อฐานข้อมูลสำเร็จจะเห็น: `[Server] กำลังทำงานที่พอร์ต 3000`
-   เปิดเบราว์เซอร์ไปที่ `http://localhost:3000` เพื่อใช้งานหน้าเว็บ
+
+### 2) Frontend (static SPA)
+
+ไม่ต้อง `npm install`/`npm run dev` — เปิด `frontend/index.html` ตรงๆ ในเบราว์เซอร์ หรือรันเซิร์ฟเวอร์
+static เช่น
+```
+npx serve frontend
+```
+frontend จะเรียก API ที่ `http://localhost:3000/api` ตามค่าใน `frontend/js/config.js` (แก้ `API_BASE_URL`
+ในไฟล์นั้นถ้า backend รันอยู่คนละพอร์ต/เครื่อง) — ต้องรัน backend (ข้อ 1) ควบคู่กันเสมอ
 
 ## ⚠️ สำคัญ: แก้บั๊ก encoding ภาษาไทยใน schema.sql แล้ว
 ระหว่างพัฒนาพบว่าถ้า import `schema.sql` ด้วยคำสั่ง `mysql -u root < schema.sql` ผ่าน command line
