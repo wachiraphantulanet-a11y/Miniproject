@@ -13,12 +13,16 @@ const NAV_ITEMS = [
   { path: '/pest-disease', label: 'โรค/แมลง', roles: ['admin', 'staff', 'owner'] },
   { path: '/quality-evaluations', label: 'ประเมินคุณภาพ', roles: ['admin', 'staff', 'owner'] },
   { path: '/reports', label: 'รายงาน', roles: ['admin', 'staff', 'owner'] },
+  { path: '/admin-dashboard', label: 'แดชบอร์ดผู้ดูแลระบบ', roles: ['admin'] },
   { path: '/users', label: 'ผู้ใช้งาน', roles: ['admin'] },
 ];
 
 function renderNav() {
   const navEl = document.getElementById('nav');
   const userBarEl = document.getElementById('user-bar');
+  const layoutEl = document.getElementById('layout');
+
+  layoutEl.classList.toggle('no-sidebar', !auth.isLoggedIn());
 
   if (!auth.isLoggedIn()) {
     navEl.innerHTML = '';
@@ -35,8 +39,14 @@ function renderNav() {
     .join('');
 
   userBarEl.innerHTML = `
-    <span>${escapeHtml(user.fullName)} (${escapeHtml(user.role)})</span>
-    <button type="button" id="logout-btn">ออกจากระบบ</button>
+    <span class="user-role">${escapeHtml(user.fullName)} (${escapeHtml(user.role)})</span>
+    <button type="button" id="logout-btn" class="btn-logout" title="ออกจากระบบ" aria-label="ออกจากระบบ">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <polyline points="16 17 21 12 16 7"></polyline>
+        <line x1="21" y1="12" x2="9" y2="12"></line>
+      </svg>
+    </button>
   `;
   userBarEl.querySelector('#logout-btn').addEventListener('click', auth.logout);
 }
@@ -56,6 +66,7 @@ router.register('/pest-disease', renderResourceView('pestDisease'));
 router.register('/quality-evaluations', renderQualityEvaluationsList);
 router.register('/quality-evaluations/detail', renderQualityEvaluationDetail);
 router.register('/reports', renderReports);
+router.register('/admin-dashboard', renderAdminDashboard);
 router.register('/users', renderUsers);
 router.register('/not-found', (container) => {
   container.innerHTML = '<p class="error">ไม่พบหน้านี้</p>';

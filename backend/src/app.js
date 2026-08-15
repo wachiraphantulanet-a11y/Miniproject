@@ -1,4 +1,3 @@
-const path = require('path');
 const express = require('express');
 const cors = require('cors');
 
@@ -16,14 +15,12 @@ const careRoutes = require('./routes/careRoutes');
 const pestDiseaseRoutes = require('./routes/pestDiseaseRoutes');
 const qualityEvaluationRoutes = require('./routes/qualityEvaluationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const activityLogRoutes = require('./routes/activityLogRoutes');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-
-// เสิร์ฟไฟล์ frontend (SPA แบบ hash routing — ไม่ต้องมี route แยกฝั่ง server)
-app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Health check — ใช้เช็คว่า server และ DB พร้อมทำงานหรือไม่
 app.get('/api/health', (req, res) => {
@@ -44,6 +41,7 @@ app.use('/api/care-records', careRoutes);
 app.use('/api/pest-disease-records', pestDiseaseRoutes);
 app.use('/api/quality-evaluations', qualityEvaluationRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/activity-logs', activityLogRoutes);
 
 // 404 handler — route ที่ไม่ตรงกับอะไรเลย
 app.use((req, res) => {

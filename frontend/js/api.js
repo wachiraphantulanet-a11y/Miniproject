@@ -1,5 +1,6 @@
 // fetch wrapper กลาง — แนบ JWT อัตโนมัติ, โยน error พร้อมข้อความจาก backend
-const API_BASE = '/api';
+// API_BASE_URL มาจาก config.js (frontend/js/config.js)
+const API_BASE = API_BASE_URL;
 
 async function apiFetch(path, { method = 'GET', body, auth = true } = {}) {
   const headers = { 'Content-Type': 'application/json' };
