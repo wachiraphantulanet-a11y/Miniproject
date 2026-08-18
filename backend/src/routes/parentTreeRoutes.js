@@ -15,8 +15,8 @@ router.use(authenticate);
 router.get('/', listParentTrees);
 router.get('/:id', getParentTree);
 
-// เพิ่ม/แก้ไข ได้เฉพาะ admin และ staff (ตรงกับ DFD: เจ้าหน้าที่เพาะพันธุ์บันทึกข้อมูลต้นพ่อ-แม่พันธุ์)
-router.post('/', authorize('admin', 'staff'), createParentTree);
-router.put('/:id', authorize('admin', 'staff'), updateParentTree);
+// เพิ่ม/แก้ไข ได้เฉพาะ admin เท่านั้น
+router.post('/', authorize('admin'), createParentTree);
+router.put('/:id', authorize('admin'), updateParentTree);
 
 module.exports = router;

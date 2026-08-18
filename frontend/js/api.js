@@ -4,9 +4,13 @@ const API_BASE = API_BASE_URL;
 
 async function apiFetch(path, { method = 'GET', body, auth = true } = {}) {
   const headers = { 'Content-Type': 'application/json' };
+  let hasToken = false;
   if (auth) {
     const token = localStorage.getItem('token');
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+      hasToken = true;
+    }
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
@@ -15,7 +19,9 @@ async function apiFetch(path, { method = 'GET', body, auth = true } = {}) {
     body: body != null ? JSON.stringify(body) : undefined,
   });
 
-  if (res.status === 401 && auth) {
+  // 401 ตอน "มี token แนบไปแล้ว" เท่านั้นที่แปลว่า session หมดอายุจริง — ถ้าไม่มี token
+  // (เช่น กรอกรหัสผ่านผิดตอน login) ต้องปล่อยให้ error message จริงจาก backend ผ่านไปด้านล่าง
+  if (res.status === 401 && hasToken) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.hash = '#/login';

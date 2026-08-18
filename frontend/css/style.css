@@ -229,14 +229,69 @@ main#app {
 h2 { margin: 0 0 0.75rem; color: var(--color-text); }
 h2, h3, h4 { letter-spacing: 0.01em; }
 
+.login-page {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  overflow: hidden;
+}
+
+.login-glow {
+  position: absolute;
+  width: 480px;
+  height: 480px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-primary-glow), transparent 70%);
+  filter: blur(10px);
+  animation: login-glow-drift 9s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes login-glow-drift {
+  from { transform: translate(-12%, -8%) scale(1); }
+  to   { transform: translate(12%, 8%) scale(1.15); }
+}
+
 .login-box {
+  position: relative;
   max-width: 380px;
-  margin: 4rem auto;
+  width: 100%;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 2.25rem;
   box-shadow: var(--shadow);
+  text-align: center;
+  animation: login-box-in 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes login-box-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.login-box.shake { animation: login-shake 0.4s ease; }
+
+@keyframes login-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}
+
+.login-mango {
+  font-size: 2.6rem;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  animation: login-mango-float 3s ease-in-out infinite;
+}
+
+@keyframes login-mango-float {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-8px) rotate(4deg); }
 }
 
 .login-box h2 { color: var(--color-primary); }
@@ -245,6 +300,8 @@ h2, h3, h4 { letter-spacing: 0.01em; }
   color: var(--color-muted);
   margin-top: -0.5rem;
 }
+
+.login-box .form-field { text-align: left; }
 
 .form-field {
   display: flex;
@@ -329,6 +386,73 @@ button.btn-delete:hover { background: rgba(248, 113, 113, 0.1); }
 
 .crud-form h3 { grid-column: 1 / -1; margin: 0 0 0.25rem; color: var(--color-primary); }
 .crud-form button { grid-column: span 1; justify-self: start; }
+.modal-actions { grid-column: 1 / -1; display: flex; gap: 0.6rem; }
+
+/* Modal popup — ใช้กับฟอร์ม "แก้ไข" ของทุกหน้า (mount ที่ #modal-root) */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 8, 5, 0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 100;
+  animation: modal-fade-in 0.15s ease;
+}
+
+.modal-box {
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+  animation: modal-pop-in 0.18s ease;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+
+.modal-header h3 { margin: 0; color: var(--color-primary); }
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--color-muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius);
+}
+
+.modal-close:hover { color: var(--color-text); background: rgba(255, 255, 255, 0.08); }
+
+.modal-box .crud-form {
+  margin-bottom: 0;
+  box-shadow: none;
+  border: none;
+  padding: 0;
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 
 .data-table {
   width: 100%;

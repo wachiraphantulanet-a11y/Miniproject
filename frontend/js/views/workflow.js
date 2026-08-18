@@ -83,28 +83,45 @@ async function renderWorkflowDetail(container, cfg, id) {
   const actionsArea = container.querySelector('#wf-detail-actions');
 
   if (canEditNow) {
-    const formHtml = await renderForm(editFields, item);
     const editSection = document.createElement('div');
     editSection.innerHTML = `
-      <h3>แก้ไขข้อมูล</h3>
-      <form id="wf-edit-form" class="crud-form">
-        ${formHtml}
-        <button type="submit">บันทึกการแก้ไข</button>
-        ${canSubmit ? '<button type="button" id="wf-submit-btn">ส่งขออนุมัติ</button>' : ''}
-        ${canResubmit ? '<button type="button" id="wf-resubmit-btn">ส่งเข้ารออนุมัติอีกครั้ง</button>' : ''}
-      </form>
+      <button type="button" id="wf-open-edit-btn">แก้ไขข้อมูล</button>
+      ${canSubmit ? '<button type="button" id="wf-submit-btn">ส่งขออนุมัติ</button>' : ''}
+      ${canResubmit ? '<button type="button" id="wf-resubmit-btn">ส่งเข้ารออนุมัติอีกครั้ง</button>' : ''}
     `;
     actionsArea.appendChild(editSection);
-    editSection.querySelector('#wf-edit-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      try {
-        const values = readFormValues(e.target, editFields);
-        await api.put(`${endpoint}/${id}`, values);
-        await renderWorkflowDetail(container, cfg, id);
-      } catch (err) {
-        alert(err.message);
-      }
+
+    editSection.querySelector('#wf-open-edit-btn').addEventListener('click', async () => {
+      const formHtml = await renderForm(editFields, item);
+      const modalBox = openModal(`
+        <div class="modal-header">
+          <h3>แก้ไขข้อมูล — ${title} #${id}</h3>
+          <button type="button" class="modal-close" id="wf-modal-close" aria-label="ปิด">&times;</button>
+        </div>
+        <form id="wf-edit-form" class="crud-form">
+          ${formHtml}
+          <div class="modal-actions">
+            <button type="submit">บันทึกการแก้ไข</button>
+            <button type="button" id="wf-cancel-edit">ยกเลิก</button>
+          </div>
+        </form>
+      `);
+      wireDynamicFields(modalBox.querySelector('#wf-edit-form'), editFields);
+      modalBox.querySelector('#wf-edit-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          const values = readFormValues(e.target, editFields);
+          await api.put(`${endpoint}/${id}`, values);
+          closeModal();
+          await renderWorkflowDetail(container, cfg, id);
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+      modalBox.querySelector('#wf-cancel-edit').addEventListener('click', closeModal);
+      modalBox.querySelector('#wf-modal-close').addEventListener('click', closeModal);
     });
+
     const submitBtn = editSection.querySelector('#wf-submit-btn');
     if (submitBtn) {
       submitBtn.addEventListener('click', async () => {

@@ -1,9 +1,6 @@
 // Config ของ resource ที่ใช้ generic CRUD component (crud.js) ร่วมกัน
-// สิทธิ์เขียน: admin, staff (บังคับจริงที่ backend อยู่แล้ว ที่นี่แค่ซ่อน/แสดง UI ให้เหมาะสม)
-
-function canWriteMasterData() {
-  return auth.hasRole('admin', 'staff');
-}
+// สิทธิ์เขียน: กำหนดต่อ resource ด้วย writeRoles (ดีฟอลต์ admin+staff) — บังคับจริงที่ backend
+// อยู่แล้ว ที่นี่แค่ซ่อน/แสดง UI ให้เหมาะสม
 
 async function loadOptions(endpoint, valueKey, labelFn) {
   const rows = await api.get(endpoint);
@@ -48,6 +45,7 @@ const resourceConfigs = {
       { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
     ],
     canDelete: true,
+    writeRoles: ['admin'], // เพิ่ม/แก้ไข/ลบ พันธุ์มะม่วง — admin เท่านั้น
   },
 
   parentTrees: {
@@ -88,6 +86,7 @@ const resourceConfigs = {
       { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
     ],
     canDelete: false,
+    writeRoles: ['admin'], // เพิ่ม/แก้ไข ต้นพ่อ-แม่พันธุ์ — admin เท่านั้น
   },
 
   pollinations: {
@@ -298,7 +297,7 @@ const resourceConfigs = {
 function renderResourceView(key) {
   return async (container) => {
     const config = resourceConfigs[key];
-    const writable = canWriteMasterData();
+    const writable = auth.hasRole(...(config.writeRoles || ['admin', 'staff']));
     await renderCrudView(container, {
       title: config.title,
       endpoint: config.endpoint,

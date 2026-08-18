@@ -16,9 +16,9 @@ router.use(authenticate);
 router.get('/', listVarieties);
 router.get('/:id', getVariety);
 
-// เพิ่ม/แก้ไข/ลบ ได้เฉพาะ admin และ staff (ตรงกับ DFD: เจ้าหน้าที่เพาะพันธุ์บันทึกข้อมูลพันธุ์มะม่วง)
-router.post('/', authorize('admin', 'staff'), createVariety);
-router.put('/:id', authorize('admin', 'staff'), updateVariety);
-router.delete('/:id', authorize('admin', 'staff'), deleteVariety);
+// เพิ่ม/แก้ไข/ลบ ได้เฉพาะ admin เท่านั้น
+router.post('/', authorize('admin'), createVariety);
+router.put('/:id', authorize('admin'), updateVariety);
+router.delete('/:id', authorize('admin'), deleteVariety);
 
 module.exports = router;

@@ -104,6 +104,30 @@ function wireDynamicFields(formEl, fields) {
     });
 }
 
+// Modal popup ใช้ร่วมกันสำหรับฟอร์ม "แก้ไข" ของทุกหน้า (mount ที่ #modal-root ใน index.html)
+function openModal(innerHtml) {
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal-box" role="dialog" aria-modal="true">${innerHtml}</div>
+    </div>
+  `;
+  root.querySelector('#modal-backdrop').addEventListener('click', (e) => {
+    if (e.target.id === 'modal-backdrop') closeModal();
+  });
+  document.addEventListener('keydown', modalEscHandler);
+  return root.querySelector('.modal-box');
+}
+
+function closeModal() {
+  document.getElementById('modal-root').innerHTML = '';
+  document.removeEventListener('keydown', modalEscHandler);
+}
+
+function modalEscHandler(e) {
+  if (e.key === 'Escape') closeModal();
+}
+
 function readFormValues(formEl, fields) {
   const values = {};
   for (const f of fields) {
@@ -204,28 +228,34 @@ async function renderCrudView(container, config) {
 
   async function showEditForm(row) {
     editingId = row[idKey];
-    const area = container.querySelector('#crud-form-area');
     const formHtml = await renderForm(editFields, row);
-    area.innerHTML = `
-      <form id="crud-edit-form" class="crud-form">
+    const modalBox = openModal(`
+      <div class="modal-header">
         <h3>แก้ไขรายการ #${editingId}</h3>
+        <button type="button" class="modal-close" id="crud-modal-close" aria-label="ปิด">&times;</button>
+      </div>
+      <form id="crud-edit-form" class="crud-form">
         ${formHtml}
-        <button type="submit">บันทึกการแก้ไข</button>
-        <button type="button" id="crud-cancel-edit">ยกเลิก</button>
+        <div class="modal-actions">
+          <button type="submit">บันทึกการแก้ไข</button>
+          <button type="button" id="crud-cancel-edit">ยกเลิก</button>
+        </div>
       </form>
-    `;
-    wireDynamicFields(area.querySelector('#crud-edit-form'), editFields);
-    area.querySelector('#crud-edit-form').addEventListener('submit', async (e) => {
+    `);
+    wireDynamicFields(modalBox.querySelector('#crud-edit-form'), editFields);
+    modalBox.querySelector('#crud-edit-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {
         const values = readFormValues(e.target, editFields);
         await api.put(`${endpoint}/${editingId}`, values);
+        closeModal();
         await load();
       } catch (err) {
         alert(err.message);
       }
     });
-    area.querySelector('#crud-cancel-edit').addEventListener('click', () => load());
+    modalBox.querySelector('#crud-cancel-edit').addEventListener('click', closeModal);
+    modalBox.querySelector('#crud-modal-close').addEventListener('click', closeModal);
   }
 
   await load();

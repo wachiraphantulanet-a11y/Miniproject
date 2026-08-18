@@ -87,7 +87,7 @@ describe('อนุมัติ/ปฏิเสธ — admin, owner เท่า
   });
 });
 
-describe('เขียนข้อมูล — admin, staff เท่านั้น (owner อ่านได้อย่างเดียว)', () => {
+describe('พันธุ์มะม่วง + ต้นพ่อ-แม่พันธุ์ — เขียนได้เฉพาะ admin เท่านั้น', () => {
   it('owner สร้างพันธุ์มะม่วงไม่ได้ → 403', async () => {
     const res = await request(app)
       .post('/api/varieties')
@@ -96,16 +96,76 @@ describe('เขียนข้อมูล — admin, staff เท่านั�
     expect(res.status).toBe(403);
   });
 
-  it('owner อ่านรายการพันธุ์มะม่วงได้', async () => {
-    const res = await request(app).get('/api/varieties').set('Authorization', `Bearer ${ownerToken}`);
-    expect(res.status).toBe(200);
-  });
-
-  it('staff สร้างพันธุ์มะม่วงได้', async () => {
+  it('staff สร้างพันธุ์มะม่วงไม่ได้ → 403', async () => {
     const res = await request(app)
       .post('/api/varieties')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ varietyName: `พันธุ์ staff สร้าง ${ts}` });
+      .send({ varietyName: 'ไม่ควรสร้างได้เช่นกัน' });
+    expect(res.status).toBe(403);
+  });
+
+  it('staff แก้ไข/ลบ พันธุ์มะม่วงไม่ได้ → 403', async () => {
+    const put = await request(app)
+      .put('/api/varieties/1')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ varietyName: 'แก้ไม่ได้' });
+    expect(put.status).toBe(403);
+
+    const del = await request(app).delete('/api/varieties/1').set('Authorization', `Bearer ${staffToken}`);
+    expect(del.status).toBe(403);
+  });
+
+  it('staff สร้าง/แก้ไข ต้นพ่อ-แม่พันธุ์ไม่ได้ → 403', async () => {
+    const create = await request(app)
+      .post('/api/parent-trees')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ treeCode: `NOPE-${ts}`, treeType: 'father', varietyId: 1 });
+    expect(create.status).toBe(403);
+
+    const update = await request(app)
+      .put('/api/parent-trees/1')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ location: 'แก้ไม่ได้' });
+    expect(update.status).toBe(403);
+  });
+
+  it('owner และ staff อ่านรายการพันธุ์มะม่วง/ต้นพ่อ-แม่พันธุ์ได้ปกติ', async () => {
+    const varietiesRes = await request(app).get('/api/varieties').set('Authorization', `Bearer ${ownerToken}`);
+    expect(varietiesRes.status).toBe(200);
+
+    const treesRes = await request(app).get('/api/parent-trees').set('Authorization', `Bearer ${staffToken}`);
+    expect(treesRes.status).toBe(200);
+  });
+
+  it('admin สร้างพันธุ์มะม่วงได้', async () => {
+    const res = await request(app)
+      .post('/api/varieties')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ varietyName: `พันธุ์ admin สร้าง ${ts}` });
+    expect(res.status).toBe(201);
+  });
+});
+
+describe('resource อื่นๆ — staff ยังเขียนได้ตามปกติ (ตรวจว่าไม่ได้ล็อกเกินขอบเขต)', () => {
+  it('staff สร้างแผนการเพาะพันธุ์ได้ (D4 ไม่ได้ถูกจำกัดเพิ่ม)', async () => {
+    // สิทธิ์เขียนพันธุ์มะม่วง/ต้นพ่อ-แม่พันธุ์ถูกจำกัดเหลือ admin แล้ว จึงต้องให้ admin เตรียมข้อมูลตั้งต้นก่อน
+    const variety = await request(app)
+      .post('/api/varieties')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ varietyName: `พันธุ์เตรียมทดสอบ RBAC ${ts}` });
+    const father = await request(app)
+      .post('/api/parent-trees')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ treeCode: `RBAC-F-${ts}`, treeType: 'father', varietyId: variety.body.varietyId });
+    const mother = await request(app)
+      .post('/api/parent-trees')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ treeCode: `RBAC-M-${ts}`, treeType: 'mother', varietyId: variety.body.varietyId });
+
+    const res = await request(app)
+      .post('/api/breeding-plans')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ planCode: `RBAC-PLAN-${ts}`, fatherTreeId: father.body.treeId, motherTreeId: mother.body.treeId });
     expect(res.status).toBe(201);
   });
 });

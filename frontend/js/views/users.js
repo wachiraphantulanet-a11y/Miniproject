@@ -82,25 +82,32 @@ async function renderUsers(container) {
         const id = btn.closest('tr').dataset.id;
         const row = rows.find((r) => String(r.user_id) === id);
         const formHtml = await renderForm(userEditFields, { ...row, roleId: row.role_id });
-        formArea.innerHTML = `
-          <form id="user-edit-form" class="crud-form">
+        const modalBox = openModal(`
+          <div class="modal-header">
             <h3>แก้ไขผู้ใช้งาน #${id}</h3>
+            <button type="button" class="modal-close" id="user-modal-close" aria-label="ปิด">&times;</button>
+          </div>
+          <form id="user-edit-form" class="crud-form">
             ${formHtml}
-            <button type="submit">บันทึกการแก้ไข</button>
-            <button type="button" id="user-cancel-edit">ยกเลิก</button>
+            <div class="modal-actions">
+              <button type="submit">บันทึกการแก้ไข</button>
+              <button type="button" id="user-cancel-edit">ยกเลิก</button>
+            </div>
           </form>
-        `;
-        formArea.querySelector('#user-edit-form').addEventListener('submit', async (e) => {
+        `);
+        modalBox.querySelector('#user-edit-form').addEventListener('submit', async (e) => {
           e.preventDefault();
           try {
             const values = readFormValues(e.target, userEditFields);
             await api.put(`/users/${id}`, values);
+            closeModal();
             await load();
           } catch (err) {
             alert(err.message);
           }
         });
-        formArea.querySelector('#user-cancel-edit').addEventListener('click', load);
+        modalBox.querySelector('#user-cancel-edit').addEventListener('click', closeModal);
+        modalBox.querySelector('#user-modal-close').addEventListener('click', closeModal);
       });
     });
 
