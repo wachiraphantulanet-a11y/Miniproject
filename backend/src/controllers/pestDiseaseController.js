@@ -1,5 +1,8 @@
 const { pool } = require('../config/db');
 const { logActivity } = require('../utils/activityLog');
+const { notifyRoles } = require('../utils/notify');
+
+const ISSUE_TYPE_LABELS = { disease: 'โรค', pest: 'แมลง' };
 
 const ISSUE_TYPES = ['disease', 'pest'];
 const SEVERITIES = ['low', 'medium', 'high'];
@@ -83,7 +86,10 @@ async function createPestDiseaseRecord(req, res) {
   }
 
   try {
-    const [seedling] = await pool.query('SELECT seedling_id FROM seedlings WHERE seedling_id = ?', [seedlingId]);
+    const [seedling] = await pool.query(
+      'SELECT seedling_id, seedling_code FROM seedlings WHERE seedling_id = ?',
+      [seedlingId]
+    );
     if (!seedling[0]) return res.status(400).json({ message: 'ไม่พบต้นกล้าที่ระบุ (seedlingId)' });
 
     if (careId) {
@@ -107,6 +113,15 @@ async function createPestDiseaseRecord(req, res) {
       tableName: 'pest_disease_records',
       recordId: result.insertId,
       detail: `พบปัญหา ${issueType} ที่ seedlingId=${seedlingId}`,
+    });
+
+    await notifyRoles({
+      roles: ['admin', 'owner'],
+      type: 'pest_disease_found',
+      message: `พบ${ISSUE_TYPE_LABELS[issueType]}${issueName ? ` (${issueName})` : ''} ที่ต้นกล้า ${seedling[0].seedling_code} ความรุนแรง: ${severity || 'low'}`,
+      relatedTable: 'pest_disease_records',
+      relatedId: result.insertId,
+      excludeUserId: req.user.userId,
     });
 
     return res.status(201).json({ recordId: result.insertId, seedlingId, issueType, status: 'open' });

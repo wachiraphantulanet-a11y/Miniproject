@@ -50,6 +50,7 @@ async function renderWorkflowDetail(container, cfg, id) {
   const item = await api.get(`${endpoint}/${id}`);
   const canEditNow = auth.hasRole('admin', 'staff') && editableStatuses.includes(item.status);
   const canDecideNow = auth.hasRole(...decideRoles) && item.status === 'pending_approval';
+  const canSubmit = auth.hasRole('admin', 'staff') && item.status === 'draft';
   const canResubmit = auth.hasRole('admin', 'staff') && item.status === 'rejected';
 
   container.innerHTML = `
@@ -89,6 +90,7 @@ async function renderWorkflowDetail(container, cfg, id) {
       <form id="wf-edit-form" class="crud-form">
         ${formHtml}
         <button type="submit">บันทึกการแก้ไข</button>
+        ${canSubmit ? '<button type="button" id="wf-submit-btn">ส่งขออนุมัติ</button>' : ''}
         ${canResubmit ? '<button type="button" id="wf-resubmit-btn">ส่งเข้ารออนุมัติอีกครั้ง</button>' : ''}
       </form>
     `;
@@ -103,6 +105,17 @@ async function renderWorkflowDetail(container, cfg, id) {
         alert(err.message);
       }
     });
+    const submitBtn = editSection.querySelector('#wf-submit-btn');
+    if (submitBtn) {
+      submitBtn.addEventListener('click', async () => {
+        try {
+          await api.post(`${endpoint}/${id}/submit`, {});
+          await renderWorkflowDetail(container, cfg, id);
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    }
     const resubmitBtn = editSection.querySelector('#wf-resubmit-btn');
     if (resubmitBtn) {
       resubmitBtn.addEventListener('click', async () => {

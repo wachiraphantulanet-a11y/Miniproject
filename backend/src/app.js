@@ -16,6 +16,7 @@ const pestDiseaseRoutes = require('./routes/pestDiseaseRoutes');
 const qualityEvaluationRoutes = require('./routes/qualityEvaluationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const activityLogRoutes = require('./routes/activityLogRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/pest-disease-records', pestDiseaseRoutes);
 app.use('/api/quality-evaluations', qualityEvaluationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/activity-logs', activityLogRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler — route ที่ไม่ตรงกับอะไรเลย
 app.use((req, res) => {

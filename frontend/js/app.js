@@ -27,6 +27,7 @@ function renderNav() {
   if (!auth.isLoggedIn()) {
     navEl.innerHTML = '';
     userBarEl.innerHTML = '';
+    stopNotificationPolling();
     return;
   }
 
@@ -39,6 +40,7 @@ function renderNav() {
     .join('');
 
   userBarEl.innerHTML = `
+    <div id="notif-bell" class="notif-bell"></div>
     <span class="user-role">${escapeHtml(user.fullName)} (${escapeHtml(user.role)})</span>
     <button type="button" id="logout-btn" class="btn-logout" title="ออกจากระบบ" aria-label="ออกจากระบบ">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -49,6 +51,8 @@ function renderNav() {
     </button>
   `;
   userBarEl.querySelector('#logout-btn').addEventListener('click', auth.logout);
+  renderNotificationBell();
+  startNotificationPolling();
 
   navEl.querySelectorAll('a').forEach((a) => a.addEventListener('click', closeSidebar));
 }

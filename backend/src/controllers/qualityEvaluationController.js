@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { logActivity } = require('../utils/activityLog');
+const { notifyUser } = require('../utils/notify');
 
 const EVAL_STATUSES = ['pending_approval', 'approved', 'rejected'];
 const GRADES = ['A', 'B', 'C', 'fail'];
@@ -197,7 +198,10 @@ async function decideEvaluation(req, res) {
 
   try {
     const [existing] = await pool.query(
-      'SELECT status, seedling_id, overall_grade FROM quality_evaluations WHERE evaluation_id = ?',
+      `SELECT e.status, e.seedling_id, e.overall_grade, e.evaluated_by, sl.seedling_code
+       FROM quality_evaluations e
+       JOIN seedlings sl ON sl.seedling_id = e.seedling_id
+       WHERE e.evaluation_id = ?`,
       [id]
     );
     if (!existing[0]) return res.status(404).json({ message: 'ไม่พบผลการประเมินคุณภาพนี้' });
@@ -229,6 +233,16 @@ async function decideEvaluation(req, res) {
       recordId: id,
       detail: reason || null,
     });
+
+    if (decision === 'rejected') {
+      await notifyUser({
+        userId: existing[0].evaluated_by,
+        type: 'evaluation_rejected',
+        message: `ผลประเมินคุณภาพต้นกล้า ${existing[0].seedling_code} ถูกปฏิเสธ: ${reason}`,
+        relatedTable: 'quality_evaluations',
+        relatedId: id,
+      });
+    }
 
     return res.json({ message: decision === 'approved' ? 'อนุมัติผลประเมินสำเร็จ' : 'ปฏิเสธผลประเมินสำเร็จ' });
   } catch (err) {

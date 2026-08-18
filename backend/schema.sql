@@ -282,6 +282,24 @@ CREATE TABLE activity_logs (
         REFERENCES users(user_id)
 ) ENGINE=InnoDB;
 
+-- ------------------------------------------------------------
+-- 8.1) การแจ้งเตือนในระบบ (In-app notification — Recommendation 6)
+--      สร้างเมื่อ: แผน/ผลประเมินถูกปฏิเสธ (แจ้งผู้สร้าง/ผู้ประเมิน)
+--      หรือพบปัญหาโรค/แมลง (แจ้ง admin/owner)
+-- ------------------------------------------------------------
+CREATE TABLE notifications (
+    notification_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id       INT UNSIGNED NOT NULL,      -- ผู้รับการแจ้งเตือน
+    type          VARCHAR(50) NOT NULL,       -- เช่น 'plan_rejected', 'evaluation_rejected', 'pest_disease_found'
+    message       VARCHAR(500) NOT NULL,
+    related_table VARCHAR(100) NULL,
+    related_id    INT UNSIGNED NULL,
+    is_read       TINYINT(1) NOT NULL DEFAULT 0,
+    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notif_user FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+) ENGINE=InnoDB;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ------------------------------------------------------------
@@ -293,6 +311,7 @@ CREATE INDEX idx_seedlings_status    ON seedlings(current_status);
 CREATE INDEX idx_pest_status         ON pest_disease_records(status);
 CREATE INDEX idx_care_seedling_date  ON care_records(seedling_id, care_date);
 CREATE INDEX idx_logs_table_record   ON activity_logs(table_name, record_id);
+CREATE INDEX idx_notif_user_unread   ON notifications(user_id, is_read);
 
 -- ------------------------------------------------------------
 -- 10) ข้อมูลเริ่มต้น (Seed Data) — บทบาทผู้ใช้งาน 3 กลุ่มตาม DFD

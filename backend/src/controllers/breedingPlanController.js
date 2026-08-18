@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { logActivity } = require('../utils/activityLog');
+const { notifyUser } = require('../utils/notify');
 
 const PLAN_STATUSES = ['draft', 'pending_approval', 'approved', 'rejected'];
 const EDITABLE_STATUSES = ['draft', 'rejected']; // แก้ไขแผนได้เฉพาะตอนยังไม่ส่งอนุมัติ หรือถูกปฏิเสธแล้ว (Gap 3: loop กลับ)
@@ -217,7 +218,10 @@ async function decideBreedingPlan(req, res) {
   }
 
   try {
-    const [existing] = await pool.query('SELECT status FROM breeding_plans WHERE plan_id = ?', [id]);
+    const [existing] = await pool.query(
+      'SELECT status, plan_code, created_by FROM breeding_plans WHERE plan_id = ?',
+      [id]
+    );
     if (!existing[0]) return res.status(404).json({ message: 'ไม่พบแผนการเพาะพันธุ์นี้' });
 
     if (existing[0].status !== 'pending_approval') {
@@ -239,6 +243,16 @@ async function decideBreedingPlan(req, res) {
       recordId: id,
       detail: reason || null,
     });
+
+    if (decision === 'rejected') {
+      await notifyUser({
+        userId: existing[0].created_by,
+        type: 'plan_rejected',
+        message: `แผนการเพาะพันธุ์ ${existing[0].plan_code} ถูกปฏิเสธ: ${reason}`,
+        relatedTable: 'breeding_plans',
+        relatedId: id,
+      });
+    }
 
     return res.json({ message: decision === 'approved' ? 'อนุมัติแผนสำเร็จ' : 'ปฏิเสธแผนสำเร็จ' });
   } catch (err) {
