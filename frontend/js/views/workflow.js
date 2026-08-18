@@ -13,7 +13,7 @@ async function renderWorkflowList(container, cfg) {
       <tbody>
         ${rows.map((r) => `
           <tr>
-            ${listColumns.map((c) => `<td>${escapeHtml(r[c.key])}</td>`).join('')}
+            ${listColumns.map((c) => `<td>${formatDateCell(r[c.key])}</td>`).join('')}
             <td><span class="badge badge-${r.status}">${r.status}</span></td>
             <td><a href="#${listPath}/detail?id=${r[idKey]}">ดูรายละเอียด</a></td>
           </tr>
@@ -56,7 +56,7 @@ async function renderWorkflowDetail(container, cfg, id) {
     <p><a href="#${listPath}">&larr; กลับไปรายการ</a></p>
     <h2>${title} #${id} <span class="badge badge-${item.status}">${item.status}</span></h2>
     <div class="detail-fields">
-      ${detailFields.map((f) => `<div><strong>${f.label}:</strong> ${escapeHtml(item[f.key])}</div>`).join('')}
+      ${detailFields.map((f) => `<div><strong>${f.label}:</strong> ${formatDateCell(item[f.key])}</div>`).join('')}
     </div>
 
     <h3>ประวัติการอนุมัติ/ปฏิเสธ</h3>
@@ -69,7 +69,7 @@ async function renderWorkflowDetail(container, cfg, id) {
               <td><span class="badge badge-${a.decision}">${a.decision}</span></td>
               <td>${escapeHtml(a.reason)}</td>
               <td>${escapeHtml(a.decided_by_name)}</td>
-              <td>${escapeHtml(a.decided_at)}</td>
+              <td>${formatDateCell(a.decided_at)}</td>
             </tr>
           `).join('')}
         </tbody>

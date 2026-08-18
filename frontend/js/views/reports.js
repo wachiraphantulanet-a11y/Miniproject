@@ -4,7 +4,7 @@ function reportTable(rows, columns) {
     <table class="data-table small">
       <thead><tr>${columns.map((c) => `<th>${c.label}</th>`).join('')}</tr></thead>
       <tbody>
-        ${rows.map((r) => `<tr>${columns.map((c) => `<td>${escapeHtml(r[c.key])}</td>`).join('')}</tr>`).join('')}
+        ${rows.map((r) => `<tr>${columns.map((c) => `<td>${formatDateCell(r[c.key])}</td>`).join('')}</tr>`).join('')}
       </tbody>
     </table>
   `;
@@ -79,7 +79,7 @@ async function renderReports(container) {
           <div><strong>แผนการเพาะพันธุ์:</strong> ${escapeHtml(data.plan_code)} — ${escapeHtml(data.plan_objective)}</div>
           <div><strong>ต้นพ่อพันธุ์:</strong> ${escapeHtml(data.father_tree_code)} (${escapeHtml(data.father_variety)})</div>
           <div><strong>ต้นแม่พันธุ์:</strong> ${escapeHtml(data.mother_tree_code)} (${escapeHtml(data.mother_variety)})</div>
-          <div><strong>วันที่ผสมเกสร:</strong> ${escapeHtml(data.pollination_date)} (${escapeHtml(data.pollination_method)})</div>
+          <div><strong>วันที่ผสมเกสร:</strong> ${formatDateCell(data.pollination_date)} (${escapeHtml(data.pollination_method)})</div>
           <div><strong>อัตราติดผล:</strong> ${escapeHtml(data.fruit_set_rate)}%</div>
           <div><strong>เกรดเมล็ด:</strong> ${escapeHtml(data.seed_quality_grade)}</div>
         </div>

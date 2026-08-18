@@ -8,12 +8,20 @@
 </head>
 <body>
   <div class="layout" id="layout">
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
     <aside class="sidebar" id="sidebar">
       <div class="brand">🥭 ระบบจัดการการเพาะพันธุ์มะม่วง</div>
       <nav id="nav"></nav>
     </aside>
     <div class="main-wrap">
       <header class="topbar" id="topbar">
+        <button type="button" id="sidebar-toggle" class="sidebar-toggle" aria-label="เปิดเมนู" aria-expanded="false">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
         <div id="user-bar"></div>
       </header>
       <main id="app"></main>

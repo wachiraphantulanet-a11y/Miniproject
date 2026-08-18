@@ -67,7 +67,7 @@ async function renderAdminDashboard(container) {
           <tbody>
             ${logs.map((l) => `
               <tr>
-                <td>${escapeHtml(l.created_at)}</td>
+                <td>${formatDateCell(l.created_at)}</td>
                 <td>${escapeHtml(l.full_name || l.username || '-')}</td>
                 <td><span class="badge badge-${l.action === 'REJECT' ? 'rejected' : l.action === 'APPROVE' ? 'approved' : 'draft'}">${l.action}</span></td>
                 <td>${escapeHtml(l.table_name)} #${escapeHtml(l.record_id)}</td>

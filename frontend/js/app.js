@@ -49,7 +49,23 @@ function renderNav() {
     </button>
   `;
   userBarEl.querySelector('#logout-btn').addEventListener('click', auth.logout);
+
+  navEl.querySelectorAll('a').forEach((a) => a.addEventListener('click', closeSidebar));
 }
+
+function closeSidebar() {
+  document.getElementById('layout').classList.remove('sidebar-open');
+  document.getElementById('sidebar-toggle').setAttribute('aria-expanded', 'false');
+}
+
+function toggleSidebar() {
+  const layoutEl = document.getElementById('layout');
+  const isOpen = layoutEl.classList.toggle('sidebar-open');
+  document.getElementById('sidebar-toggle').setAttribute('aria-expanded', String(isOpen));
+}
+
+document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+document.getElementById('sidebar-backdrop').addEventListener('click', closeSidebar);
 
 router.register('/login', renderLogin, { publicRoute: true });
 router.register('/dashboard', renderDashboard);

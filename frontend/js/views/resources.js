@@ -120,7 +120,7 @@ const resourceConfigs = {
     createFields: [
       {
         key: 'pollinationId', label: 'บันทึกการผสมเกสร', type: 'select', required: true,
-        options: () => loadOptions('/pollinations', 'pollination_id', (r) => `#${r.pollination_id} - ${r.plan_code} (${r.pollination_date})`),
+        options: () => loadOptions('/pollinations', 'pollination_id', (r) => `#${r.pollination_id} - ${r.plan_code} (${formatDateValue(r.pollination_date)})`),
       },
       { key: 'observedDate', label: 'วันที่สังเกต', type: 'date', required: true },
       { key: 'fruitCount', label: 'จำนวนผล', type: 'number' },
@@ -150,7 +150,7 @@ const resourceConfigs = {
     createFields: [
       {
         key: 'fruitSetId', label: 'บันทึกการติดผล', type: 'select', required: true,
-        options: () => loadOptions('/fruit-sets', 'fruit_set_id', (r) => `#${r.fruit_set_id} (${r.observed_date})`),
+        options: () => loadOptions('/fruit-sets', 'fruit_set_id', (r) => `#${r.fruit_set_id} (${formatDateValue(r.observed_date)})`),
       },
       { key: 'collectedDate', label: 'วันที่เก็บ', type: 'date' },
       { key: 'seedCount', label: 'จำนวนเมล็ด', type: 'number' },
@@ -180,7 +180,7 @@ const resourceConfigs = {
     createFields: [
       {
         key: 'seedId', label: 'เมล็ดพันธุ์', type: 'select', required: true,
-        options: () => loadOptions('/seeds', 'seed_id', (r) => `#${r.seed_id} (${r.collected_date || 'ไม่ระบุวันที่'})`),
+        options: () => loadOptions('/seeds', 'seed_id', (r) => `#${r.seed_id} (${r.collected_date ? formatDateValue(r.collected_date) : 'ไม่ระบุวันที่'})`),
       },
       { key: 'seedlingCode', label: 'รหัสต้นกล้า', type: 'text', required: true },
       { key: 'germinationDate', label: 'วันที่งอก', type: 'date' },
@@ -251,7 +251,7 @@ const resourceConfigs = {
       },
       {
         key: 'careId', label: 'รอบการดูแลที่พบ (ไม่บังคับ)', type: 'select',
-        options: () => loadOptions('/care-records', 'care_id', (r) => `#${r.care_id} - ${r.seedling_code} (${r.care_date})`),
+        options: () => loadOptions('/care-records', 'care_id', (r) => `#${r.care_id} - ${r.seedling_code} (${formatDateValue(r.care_date)})`),
       },
       { key: 'foundDate', label: 'วันที่พบ', type: 'date', required: true },
       {

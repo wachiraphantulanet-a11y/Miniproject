@@ -8,6 +8,20 @@ function escapeHtml(value) {
   }[c]));
 }
 
+// แปลงค่าวันที่จาก backend (YYYY-MM-DD หรือ YYYY-MM-DD HH:MM:SS จาก mysql2 dateStrings)
+// ให้แสดงเป็น วัน/เดือน/ปี (พร้อมเวลาถ้ามี) — ใช้เฉพาะตอนแสดงผล ห้ามใช้กับ value ของ input
+function formatDateValue(value) {
+  if (typeof value !== 'string') return value;
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}:\d{2}):\d{2})?/);
+  if (!m) return value;
+  const [, y, mo, d, time] = m;
+  return `${d}/${mo}/${y}${time ? ' ' + time : ''}`;
+}
+
+function formatDateCell(value) {
+  return escapeHtml(formatDateValue(value));
+}
+
 async function resolveOptions(field) {
   if (!field.options) return [];
   if (typeof field.options === 'function') return field.options();
@@ -78,7 +92,7 @@ async function renderCrudView(container, config) {
         <tbody>
           ${rows.map((row) => `
             <tr data-id="${row[idKey]}">
-              ${listColumns.map((c) => `<td>${escapeHtml(row[c.key])}</td>`).join('')}
+              ${listColumns.map((c) => `<td>${formatDateCell(row[c.key])}</td>`).join('')}
               ${(canEdit || canDelete) ? `
                 <td class="row-actions">
                   ${canEdit ? '<button type="button" class="btn-edit">แก้ไข</button>' : ''}
