@@ -22,6 +22,9 @@ function formatDateCell(value) {
   return escapeHtml(formatDateValue(value));
 }
 
+// ค่าพิเศษของ select ที่แปลว่า "ผู้ใช้เลือกกรอกเอง" — ใช้กับ field type 'select-with-other'
+const OTHER_OPTION_VALUE = '__other__';
+
 async function resolveOptions(field) {
   if (!field.options) return [];
   if (typeof field.options === 'function') return field.options();
@@ -40,7 +43,31 @@ function fieldInputHtml(field, value = '') {
       .join('');
     return `<select id="${id}" name="${field.key}" ${req}><option value="">-- เลือก --</option>${opts}</select>`;
   }
+  if (field.type === 'select-with-other') {
+    const known = field.resolvedOptions.map((o) => String(o.value));
+    const isCustom = value !== '' && !known.includes(String(value));
+    const selectValue = isCustom ? OTHER_OPTION_VALUE : value;
+    const opts = field.resolvedOptions
+      .map((o) => `<option value="${escapeHtml(o.value)}" ${String(o.value) === String(selectValue) ? 'selected' : ''}>${escapeHtml(o.label)}</option>`)
+      .join('');
+    return `
+      <select id="${id}" name="${field.key}" data-select-with-other ${req}>
+        <option value="">-- เลือก --</option>
+        ${opts}
+        <option value="${OTHER_OPTION_VALUE}" ${selectValue === OTHER_OPTION_VALUE ? 'selected' : ''}>อื่นๆ (ระบุเอง)</option>
+      </select>
+      <input type="text" id="${id}_other" name="${field.key}_other" class="other-input"
+        placeholder="ระบุ${escapeHtml(field.label)}" value="${escapeHtml(isCustom ? value : '')}"
+        ${selectValue === OTHER_OPTION_VALUE ? '' : 'style="display:none"'} />
+    `;
+  }
   return `<input type="${field.type || 'text'}" id="${id}" name="${field.key}" value="${escapeHtml(value)}" ${req} />`;
+}
+
+// field.key เป็น camelCase (ใช้ส่งขึ้น API) แต่แถวข้อมูลที่ API คืนมาเป็น snake_case
+// (เช่น field.key = 'qualityGrade' แต่ row มี row.quality_grade) — ต้องแปลงเพื่อดึงค่าปัจจุบันมา prefill ได้
+function camelToSnake(key) {
+  return key.replace(/([A-Z])/g, '_$1').toLowerCase();
 }
 
 async function renderForm(fields, initialValues = {}) {
@@ -48,26 +75,51 @@ async function renderForm(fields, initialValues = {}) {
     f.resolvedOptions = await resolveOptions(f);
   }
   return fields
-    .map((f) => `
+    .map((f) => {
+      const value = initialValues[f.key] ?? initialValues[camelToSnake(f.key)] ?? '';
+      return `
       <label class="form-field">
         <span>${f.label}${f.required ? ' *' : ''}</span>
-        ${fieldInputHtml(f, initialValues[f.key] ?? '')}
+        ${fieldInputHtml(f, value)}
       </label>
-    `)
+    `;
+    })
     .join('');
+}
+
+// เรียกหลัง insert form HTML ลง DOM แล้ว — ผูก event ให้ select-with-other โชว์/ซ่อนช่องกรอกเอง
+function wireDynamicFields(formEl, fields) {
+  fields
+    .filter((f) => f.type === 'select-with-other')
+    .forEach((f) => {
+      const select = formEl.querySelector(`[name="${f.key}"]`);
+      const otherInput = formEl.querySelector(`[name="${f.key}_other"]`);
+      if (!select || !otherInput) return;
+      select.addEventListener('change', () => {
+        const isOther = select.value === OTHER_OPTION_VALUE;
+        otherInput.style.display = isOther ? '' : 'none';
+        if (isOther) otherInput.focus();
+        else otherInput.value = '';
+      });
+    });
 }
 
 function readFormValues(formEl, fields) {
   const values = {};
   for (const f of fields) {
     const el = formEl.querySelector(`[name="${f.key}"]`);
-    let val = el.value.trim();
-    if (val === '') {
+    let raw;
+    if (f.type === 'select-with-other' && el.value === OTHER_OPTION_VALUE) {
+      raw = formEl.querySelector(`[name="${f.key}_other"]`).value.trim();
+    } else {
+      raw = el.value.trim();
+    }
+    if (raw === '') {
       values[f.key] = null;
     } else if (f.type === 'number') {
-      values[f.key] = Number(val);
+      values[f.key] = Number(raw);
     } else {
-      values[f.key] = val;
+      values[f.key] = raw;
     }
   }
   return values;
@@ -137,6 +189,7 @@ async function renderCrudView(container, config) {
         <button type="submit">บันทึก</button>
       </form>
     `;
+    wireDynamicFields(area.querySelector('#crud-create-form'), createFields);
     area.querySelector('#crud-create-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {
@@ -161,6 +214,7 @@ async function renderCrudView(container, config) {
         <button type="button" id="crud-cancel-edit">ยกเลิก</button>
       </form>
     `;
+    wireDynamicFields(area.querySelector('#crud-edit-form'), editFields);
     area.querySelector('#crud-edit-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {

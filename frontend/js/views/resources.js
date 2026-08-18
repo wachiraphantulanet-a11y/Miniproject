@@ -10,6 +10,20 @@ async function loadOptions(endpoint, valueKey, labelFn) {
   return rows.map((r) => ({ value: r[valueKey], label: labelFn(r) }));
 }
 
+const POLLINATION_METHOD_OPTIONS = [
+  { value: 'มือ', label: 'มือ' },
+  { value: 'ทางธรรมชาติ/ลม', label: 'ทางธรรมชาติ/ลม' },
+  { value: 'แมลง/ผึ้ง', label: 'แมลง/ผึ้ง' },
+];
+
+// ต้องตรงกับ QUALITY_GRADES ใน backend/src/controllers/seedController.js
+const SEED_QUALITY_GRADE_OPTIONS = [
+  { value: 'A', label: 'A' },
+  { value: 'B', label: 'B' },
+  { value: 'C', label: 'C' },
+  { value: 'D', label: 'D' },
+];
+
 const resourceConfigs = {
   varieties: {
     title: 'พันธุ์มะม่วง',
@@ -94,13 +108,13 @@ const resourceConfigs = {
       },
       { key: 'pollinationDate', label: 'วันที่ผสมเกสร', type: 'date', required: true },
       { key: 'flowerCount', label: 'จำนวนดอก', type: 'number' },
-      { key: 'method', label: 'วิธีการ', type: 'text' },
+      { key: 'method', label: 'วิธีการ', type: 'select-with-other', options: POLLINATION_METHOD_OPTIONS },
       { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
     ],
     editFields: [
       { key: 'pollinationDate', label: 'วันที่ผสมเกสร', type: 'date' },
       { key: 'flowerCount', label: 'จำนวนดอก', type: 'number' },
-      { key: 'method', label: 'วิธีการ', type: 'text' },
+      { key: 'method', label: 'วิธีการ', type: 'select-with-other', options: POLLINATION_METHOD_OPTIONS },
       { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
     ],
     canDelete: false,
@@ -154,13 +168,13 @@ const resourceConfigs = {
       },
       { key: 'collectedDate', label: 'วันที่เก็บ', type: 'date' },
       { key: 'seedCount', label: 'จำนวนเมล็ด', type: 'number' },
-      { key: 'qualityGrade', label: 'เกรด', type: 'text' },
+      { key: 'qualityGrade', label: 'เกรด', type: 'select', options: SEED_QUALITY_GRADE_OPTIONS },
       { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
     ],
     editFields: [
       { key: 'collectedDate', label: 'วันที่เก็บ', type: 'date' },
       { key: 'seedCount', label: 'จำนวนเมล็ด', type: 'number' },
-      { key: 'qualityGrade', label: 'เกรด', type: 'text' },
+      { key: 'qualityGrade', label: 'เกรด', type: 'select', options: SEED_QUALITY_GRADE_OPTIONS },
       { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
     ],
     canDelete: false,

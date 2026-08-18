@@ -154,6 +154,14 @@ describe('D6: เมล็ดพันธุ์และต้นกล้า', 
     ids.seedId = res.body.seedId;
   });
 
+  it('qualityGrade นอกเหนือ A-D → 400', async () => {
+    const res = await auth(request(app).post('/api/seeds')).send({
+      fruitSetId: ids.fruitSetId,
+      qualityGrade: 'E',
+    });
+    expect(res.status).toBe(400);
+  });
+
   it('สร้างต้นกล้าได้ (สถานะเริ่มต้น growing)', async () => {
     const res = await auth(request(app).post('/api/seedlings')).send({
       seedId: ids.seedId,

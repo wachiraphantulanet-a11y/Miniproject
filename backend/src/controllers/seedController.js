@@ -1,6 +1,8 @@
 const { pool } = require('../config/db');
 const { logActivity } = require('../utils/activityLog');
 
+const QUALITY_GRADES = ['A', 'B', 'C', 'D'];
+
 const SEED_SELECT = `
   SELECT s.seed_id, s.fruit_set_id, s.collected_date, s.seed_count, s.quality_grade,
          s.notes, s.recorded_by, s.created_at
@@ -48,6 +50,9 @@ async function createSeed(req, res) {
   if (!fruitSetId) {
     return res.status(400).json({ message: 'กรุณาระบุ fruitSetId' });
   }
+  if (qualityGrade && !QUALITY_GRADES.includes(qualityGrade)) {
+    return res.status(400).json({ message: `qualityGrade ต้องเป็นหนึ่งใน: ${QUALITY_GRADES.join(', ')}` });
+  }
 
   try {
     const [fruitSet] = await pool.query('SELECT fruit_set_id FROM fruit_set_records WHERE fruit_set_id = ?', [fruitSetId]);
@@ -78,6 +83,10 @@ async function createSeed(req, res) {
 async function updateSeed(req, res) {
   const { id } = req.params;
   const { collectedDate, seedCount, qualityGrade, notes } = req.body;
+
+  if (qualityGrade && !QUALITY_GRADES.includes(qualityGrade)) {
+    return res.status(400).json({ message: `qualityGrade ต้องเป็นหนึ่งใน: ${QUALITY_GRADES.join(', ')}` });
+  }
 
   try {
     const [existing] = await pool.query('SELECT seed_id FROM seeds WHERE seed_id = ?', [id]);
