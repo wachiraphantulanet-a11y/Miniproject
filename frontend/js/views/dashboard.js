@@ -8,7 +8,7 @@ function breakdownTable(rows, columns) {
     <table class="data-table small">
       <thead><tr>${columns.map((c) => `<th>${c.label}</th>`).join('')}</tr></thead>
       <tbody>
-        ${rows.map((r) => `<tr>${columns.map((c) => `<td>${formatDateCell(r[c.key])}</td>`).join('')}</tr>`).join('')}
+        ${rows.map((r) => `<tr>${columns.map((c) => `<td>${formatCellValue(c, r)}</td>`).join('')}</tr>`).join('')}
       </tbody>
     </table>
   `;
@@ -58,19 +58,19 @@ async function renderDashboard(container) {
       <div class="dashboard-grid">
         <section>
           <h3>แผนการเพาะพันธุ์ตามสถานะ</h3>
-          ${breakdownTable(summary.breedingPlans, [{ key: 'status', label: 'สถานะ' }, { key: 'total', label: 'จำนวน' }])}
+          ${breakdownTable(summary.breedingPlans, [{ key: 'status', label: 'สถานะ', labels: WORKFLOW_STATUS_LABELS }, { key: 'total', label: 'จำนวน' }])}
         </section>
         <section>
           <h3>ต้นกล้าตามสถานะ</h3>
-          ${breakdownTable(summary.seedlings, [{ key: 'current_status', label: 'สถานะ' }, { key: 'total', label: 'จำนวน' }])}
+          ${breakdownTable(summary.seedlings, [{ key: 'current_status', label: 'สถานะ', labels: SEEDLING_STATUS_LABELS }, { key: 'total', label: 'จำนวน' }])}
         </section>
         <section>
           <h3>ผลประเมินคุณภาพตามเกรด/สถานะ</h3>
-          ${breakdownTable(summary.qualityEvaluations, [{ key: 'overall_grade', label: 'เกรด' }, { key: 'status', label: 'สถานะ' }, { key: 'total', label: 'จำนวน' }])}
+          ${breakdownTable(summary.qualityEvaluations, [{ key: 'overall_grade', label: 'เกรด' }, { key: 'status', label: 'สถานะ', labels: WORKFLOW_STATUS_LABELS }, { key: 'total', label: 'จำนวน' }])}
         </section>
         <section>
           <h3>โรค/แมลงตามความรุนแรง</h3>
-          ${breakdownTable(summary.pestDisease, [{ key: 'issue_type', label: 'ประเภท' }, { key: 'severity', label: 'ความรุนแรง' }, { key: 'status', label: 'สถานะ' }, { key: 'total', label: 'จำนวน' }])}
+          ${breakdownTable(summary.pestDisease, [{ key: 'issue_type', label: 'ประเภท', labels: ISSUE_TYPE_LABELS }, { key: 'severity', label: 'ความรุนแรง', labels: SEVERITY_LABELS }, { key: 'status', label: 'สถานะ', labels: PEST_STATUS_LABELS }, { key: 'total', label: 'จำนวน' }])}
         </section>
       </div>
     </div>

@@ -3,11 +3,13 @@ const { logActivity } = require('../utils/activityLog');
 const { notifyUser } = require('../utils/notify');
 
 const EVAL_STATUSES = ['pending_approval', 'approved', 'rejected'];
-const GRADES = ['A', 'B', 'C', 'fail'];
+// ต้องตรงกับ QUALITY_GRADES ใน backend/src/controllers/seedController.js (เกรดเมล็ดพันธุ์)
+const GRADES = ['A', 'B', 'C', 'D'];
 
 const EVAL_SELECT = `
   SELECT e.evaluation_id, e.seedling_id, sl.seedling_code, e.evaluation_date,
-         e.overall_score, e.overall_grade, e.status, e.evaluated_by, e.notes, e.created_at
+         e.overall_score, e.overall_grade, e.status, e.evaluated_by, e.notes,
+         e.revised_from_evaluation_id, e.created_at
   FROM quality_evaluations e
   JOIN seedlings sl ON sl.seedling_id = e.seedling_id
 `;
@@ -67,9 +69,13 @@ async function getEvaluation(req, res) {
  * POST /api/quality-evaluations — admin, staff
  * ไม่มีสถานะ draft ในสคีมา สร้างแล้วเข้าสถานะ pending_approval ทันที (รอเจ้าของสวนพิจารณา)
  * ตาม Recommendation 5: ห้ามประเมินคุณภาพถ้ายังไม่มีข้อมูลการดูแล (D7) ของต้นกล้านั้น
+ *
+ * ผลประเมินเป็น record ที่ไม่แก้ไขซ้ำหลัง submit (ไม่มี PUT/submit endpoint) — ถ้าผลถูกปฏิเสธ
+ * (สถานะจบ) แล้วต้องการประเมินใหม่ ให้เรียก endpoint นี้อีกครั้งพร้อมส่ง revisedFromEvaluationId
+ * เพื่อสืบสายย้อนกลับไปผลเดิมที่ถูกปฏิเสธ
  */
 async function createEvaluation(req, res) {
-  const { seedlingId, evaluationDate, overallScore, overallGrade, notes } = req.body;
+  const { seedlingId, evaluationDate, overallScore, overallGrade, notes, revisedFromEvaluationId } = req.body;
 
   if (!seedlingId || !evaluationDate || !overallGrade) {
     return res.status(400).json({ message: 'กรุณากรอกข้อมูลให้ครบ (seedlingId, evaluationDate, overallGrade)' });
@@ -87,10 +93,19 @@ async function createEvaluation(req, res) {
       return res.status(409).json({ message: 'ประเมินคุณภาพไม่ได้ เนื่องจากยังไม่มีข้อมูลการดูแลต้นกล้านี้' });
     }
 
+    if (revisedFromEvaluationId) {
+      const [prev] = await pool.query('SELECT status FROM quality_evaluations WHERE evaluation_id = ?', [revisedFromEvaluationId]);
+      if (!prev[0]) return res.status(400).json({ message: 'ไม่พบผลประเมินเดิมที่อ้างอิง (revisedFromEvaluationId)' });
+      if (prev[0].status !== 'rejected') {
+        return res.status(409).json({ message: 'อ้างอิงผลประเมินเดิมได้เฉพาะผลที่ถูกปฏิเสธเท่านั้น' });
+      }
+    }
+
     const [result] = await pool.query(
-      `INSERT INTO quality_evaluations (seedling_id, evaluation_date, overall_score, overall_grade, status, evaluated_by, notes)
-       VALUES (?, ?, ?, ?, 'pending_approval', ?, ?)`,
-      [seedlingId, evaluationDate, overallScore || null, overallGrade, req.user.userId, notes || null]
+      `INSERT INTO quality_evaluations
+         (seedling_id, evaluation_date, overall_score, overall_grade, status, evaluated_by, notes, revised_from_evaluation_id)
+       VALUES (?, ?, ?, ?, 'pending_approval', ?, ?, ?)`,
+      [seedlingId, evaluationDate, overallScore || null, overallGrade, req.user.userId, notes || null, revisedFromEvaluationId || null]
     );
 
     await pool.query(`UPDATE seedlings SET current_status = 'ready_for_evaluation' WHERE seedling_id = ?`, [seedlingId]);
@@ -100,83 +115,14 @@ async function createEvaluation(req, res) {
       action: 'CREATE',
       tableName: 'quality_evaluations',
       recordId: result.insertId,
-      detail: `ประเมินคุณภาพต้นกล้า seedlingId=${seedlingId} เกรด ${overallGrade}`,
+      detail: revisedFromEvaluationId
+        ? `ประเมินคุณภาพต้นกล้า seedlingId=${seedlingId} เกรด ${overallGrade} แทนผลที่ถูกปฏิเสธ (evaluation_id=${revisedFromEvaluationId})`
+        : `ประเมินคุณภาพต้นกล้า seedlingId=${seedlingId} เกรด ${overallGrade}`,
     });
 
     return res.status(201).json({ evaluationId: result.insertId, seedlingId, status: 'pending_approval' });
   } catch (err) {
     console.error('[QualityEvaluation] createEvaluation error:', err);
-    return res.status(500).json({ message: 'เกิดข้อผิดพลาดภายในระบบ' });
-  }
-}
-
-/** PUT /api/quality-evaluations/:id — admin, staff: แก้ไขได้เฉพาะตอนถูกปฏิเสธแล้ว (loop กลับ) */
-async function updateEvaluation(req, res) {
-  const { id } = req.params;
-  const { evaluationDate, overallScore, overallGrade, notes } = req.body;
-
-  if (overallGrade && !GRADES.includes(overallGrade)) {
-    return res.status(400).json({ message: `overallGrade ต้องเป็นหนึ่งใน: ${GRADES.join(', ')}` });
-  }
-
-  try {
-    const [existing] = await pool.query('SELECT status FROM quality_evaluations WHERE evaluation_id = ?', [id]);
-    if (!existing[0]) return res.status(404).json({ message: 'ไม่พบผลการประเมินคุณภาพนี้' });
-
-    if (existing[0].status !== 'rejected') {
-      return res.status(409).json({ message: 'แก้ไขผลประเมินนี้ไม่ได้ เนื่องจากอยู่ระหว่างรออนุมัติหรืออนุมัติแล้ว' });
-    }
-
-    await pool.query(
-      `UPDATE quality_evaluations SET
-         evaluation_date = COALESCE(?, evaluation_date),
-         overall_score   = COALESCE(?, overall_score),
-         overall_grade   = COALESCE(?, overall_grade),
-         notes           = COALESCE(?, notes)
-       WHERE evaluation_id = ?`,
-      [evaluationDate, overallScore, overallGrade, notes, id]
-    );
-
-    await logActivity({
-      userId: req.user.userId,
-      action: 'UPDATE',
-      tableName: 'quality_evaluations',
-      recordId: id,
-      detail: JSON.stringify({ evaluationDate, overallScore, overallGrade, notes }),
-    });
-
-    return res.json({ message: 'อัปเดตผลการประเมินคุณภาพสำเร็จ' });
-  } catch (err) {
-    console.error('[QualityEvaluation] updateEvaluation error:', err);
-    return res.status(500).json({ message: 'เกิดข้อผิดพลาดภายในระบบ' });
-  }
-}
-
-/** POST /api/quality-evaluations/:id/submit — admin, staff: ส่งผลประเมิน (ที่ถูกปฏิเสธ) กลับเข้ารออนุมัติใหม่ */
-async function submitEvaluation(req, res) {
-  const { id } = req.params;
-
-  try {
-    const [existing] = await pool.query('SELECT status FROM quality_evaluations WHERE evaluation_id = ?', [id]);
-    if (!existing[0]) return res.status(404).json({ message: 'ไม่พบผลการประเมินคุณภาพนี้' });
-
-    if (existing[0].status !== 'rejected') {
-      return res.status(409).json({ message: 'ส่งผลประเมินนี้ไม่ได้ เนื่องจากไม่ได้อยู่ในสถานะถูกปฏิเสธ' });
-    }
-
-    await pool.query(`UPDATE quality_evaluations SET status = 'pending_approval' WHERE evaluation_id = ?`, [id]);
-
-    await logActivity({
-      userId: req.user.userId,
-      action: 'SUBMIT',
-      tableName: 'quality_evaluations',
-      recordId: id,
-      detail: 'ส่งผลการประเมินคุณภาพให้เจ้าของสวนพิจารณาอีกครั้ง',
-    });
-
-    return res.json({ message: 'ส่งผลประเมินเพื่อรอพิจารณาสำเร็จ' });
-  } catch (err) {
-    console.error('[QualityEvaluation] submitEvaluation error:', err);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดภายในระบบ' });
   }
 }
@@ -219,7 +165,7 @@ async function decideEvaluation(req, res) {
     await pool.query('UPDATE quality_evaluations SET status = ? WHERE evaluation_id = ?', [decision, id]);
 
     if (decision === 'approved') {
-      const nextSeedlingStatus = existing[0].overall_grade === 'fail' ? 'rejected' : 'passed';
+      const nextSeedlingStatus = existing[0].overall_grade === 'D' ? 'rejected' : 'passed';
       await pool.query('UPDATE seedlings SET current_status = ? WHERE seedling_id = ?', [
         nextSeedlingStatus,
         existing[0].seedling_id,
@@ -255,7 +201,5 @@ module.exports = {
   listEvaluations,
   getEvaluation,
   createEvaluation,
-  updateEvaluation,
-  submitEvaluation,
   decideEvaluation,
 };

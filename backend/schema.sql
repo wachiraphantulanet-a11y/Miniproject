@@ -101,6 +101,7 @@ CREATE TABLE breeding_plans (
     status             ENUM('draft','pending_approval','approved','rejected')
                        NOT NULL DEFAULT 'draft',
     created_by         INT UNSIGNED NOT NULL,
+    revised_from_plan_id INT UNSIGNED NULL,  -- ถ้าแผนนี้ถูกสร้างขึ้นแทนแผนที่ถูกปฏิเสธ ให้เก็บ plan_id เดิมไว้สืบสาย
     created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                        ON UPDATE CURRENT_TIMESTAMP,
@@ -110,10 +111,13 @@ CREATE TABLE breeding_plans (
         REFERENCES parent_trees(tree_id),
     CONSTRAINT fk_plan_creator FOREIGN KEY (created_by)
         REFERENCES users(user_id),
+    CONSTRAINT fk_plan_revised_from FOREIGN KEY (revised_from_plan_id)
+        REFERENCES breeding_plans(plan_id),
     CONSTRAINT chk_plan_parents_diff CHECK (father_tree_id <> mother_tree_id)
 ) ENGINE=InnoDB;
 
--- ประวัติการอนุมัติ/ปฏิเสธแผน (เก็บได้หลายรอบ แก้ Gap "ไม่มี loop กลับ")
+-- ประวัติการอนุมัติ/ปฏิเสธแผน (1 แผนต่อ 1 การตัดสินใจสุดท้าย — แผนที่ถูกปฏิเสธเป็นสถานะจบ
+-- ต้องสร้างแผนใหม่ผ่าน revised_from_plan_id แทนการแก้ไขแล้วยื่นซ้ำ)
 CREATE TABLE breeding_plan_approvals (
     approval_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     plan_id     INT UNSIGNED NOT NULL,
@@ -242,16 +246,19 @@ CREATE TABLE quality_evaluations (
     seedling_id     INT UNSIGNED NOT NULL,
     evaluation_date DATE NOT NULL,
     overall_score   DECIMAL(5,2) NULL,       -- คะแนนรวม เช่น 0-100
-    overall_grade   ENUM('A','B','C','fail') NOT NULL,
+    overall_grade   ENUM('A','B','C','D') NOT NULL,
     status          ENUM('pending_approval','approved','rejected')
                     NOT NULL DEFAULT 'pending_approval',
     evaluated_by    INT UNSIGNED NOT NULL,
     notes           TEXT NULL,
+    revised_from_evaluation_id INT UNSIGNED NULL,  -- ถ้าประเมินนี้แทนผลที่ถูกปฏิเสธ ให้เก็บ evaluation_id เดิมไว้สืบสาย
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_eval_seedling FOREIGN KEY (seedling_id)
         REFERENCES seedlings(seedling_id),
     CONSTRAINT fk_eval_user FOREIGN KEY (evaluated_by)
-        REFERENCES users(user_id)
+        REFERENCES users(user_id),
+    CONSTRAINT fk_eval_revised_from FOREIGN KEY (revised_from_evaluation_id)
+        REFERENCES quality_evaluations(evaluation_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE quality_evaluation_approvals (

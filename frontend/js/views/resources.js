@@ -21,6 +21,25 @@ const SEED_QUALITY_GRADE_OPTIONS = [
   { value: 'D', label: 'D' },
 ];
 
+// ป้ายกำกับภาษาไทยสำหรับค่า enum ที่เก็บเป็นภาษาอังกฤษ — ใช้กับ listColumns.labels
+// เพื่อให้ตารางแสดงผลตรงกับ label ที่เลือกในฟอร์มเพิ่ม/แก้ไข
+const TREE_TYPE_LABELS = { father: 'ต้นพ่อพันธุ์', mother: 'ต้นแม่พันธุ์' };
+const ISSUE_TYPE_LABELS = { disease: 'โรค', pest: 'แมลง' };
+const SEVERITY_LABELS = { low: 'ต่ำ', medium: 'ปานกลาง', high: 'สูง' };
+const PEST_STATUS_LABELS = { open: 'เปิด', treated: 'กำลังรักษา', resolved: 'แก้ไขแล้ว' };
+const TREE_STATUS_LABELS = { active: 'ใช้งาน', inactive: 'ไม่ใช้งาน', removed: 'นำออก' };
+const SEEDLING_STATUS_LABELS = {
+  growing: 'กำลังเติบโต',
+  ready_for_evaluation: 'พร้อมประเมิน',
+  passed: 'ผ่านเกณฑ์',
+  rejected: 'ไม่ผ่านเกณฑ์',
+  sold: 'ขายแล้ว',
+  disposed: 'คัดทิ้ง',
+};
+
+const TREE_STATUS_OPTIONS = Object.entries(TREE_STATUS_LABELS).map(([value, label]) => ({ value, label }));
+const SEEDLING_STATUS_OPTIONS = Object.entries(SEEDLING_STATUS_LABELS).map(([value, label]) => ({ value, label }));
+
 const resourceConfigs = {
   varieties: {
     title: 'พันธุ์มะม่วง',
@@ -55,11 +74,11 @@ const resourceConfigs = {
     listColumns: [
       { key: 'tree_id', label: 'ID' },
       { key: 'tree_code', label: 'รหัสต้น' },
-      { key: 'tree_type', label: 'ประเภท' },
+      { key: 'tree_type', label: 'ประเภท', labels: TREE_TYPE_LABELS },
       { key: 'variety_name', label: 'พันธุ์' },
       { key: 'planted_date', label: 'วันที่ปลูก' },
       { key: 'location', label: 'ตำแหน่ง' },
-      { key: 'status', label: 'สถานะ' },
+      { key: 'status', label: 'สถานะ', labels: TREE_STATUS_LABELS },
     ],
     createFields: [
       { key: 'treeCode', label: 'รหัสต้น', type: 'text', required: true },
@@ -81,7 +100,7 @@ const resourceConfigs = {
       { key: 'location', label: 'ตำแหน่ง', type: 'text' },
       {
         key: 'status', label: 'สถานะ', type: 'select',
-        options: [{ value: 'active', label: 'active' }, { value: 'inactive', label: 'inactive' }, { value: 'removed', label: 'removed' }],
+        options: TREE_STATUS_OPTIONS,
       },
       { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
     ],
@@ -188,7 +207,7 @@ const resourceConfigs = {
       { key: 'seedling_code', label: 'รหัสต้นกล้า' },
       { key: 'seed_id', label: 'เมล็ด ID' },
       { key: 'germination_date', label: 'วันที่งอก' },
-      { key: 'current_status', label: 'สถานะ' },
+      { key: 'current_status', label: 'สถานะ', labels: SEEDLING_STATUS_LABELS },
     ],
     createFields: [
       {
@@ -204,7 +223,7 @@ const resourceConfigs = {
       { key: 'germinationDate', label: 'วันที่งอก', type: 'date' },
       {
         key: 'currentStatus', label: 'สถานะ', type: 'select',
-        options: ['growing', 'ready_for_evaluation', 'passed', 'rejected', 'sold', 'disposed'].map((v) => ({ value: v, label: v })),
+        options: SEEDLING_STATUS_OPTIONS,
       },
       { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
     ],
@@ -252,10 +271,10 @@ const resourceConfigs = {
       { key: 'record_id', label: 'ID' },
       { key: 'seedling_code', label: 'ต้นกล้า' },
       { key: 'found_date', label: 'วันที่พบ' },
-      { key: 'issue_type', label: 'ประเภท' },
+      { key: 'issue_type', label: 'ประเภท', labels: ISSUE_TYPE_LABELS },
       { key: 'issue_name', label: 'ชื่อปัญหา' },
-      { key: 'severity', label: 'ความรุนแรง' },
-      { key: 'status', label: 'สถานะ' },
+      { key: 'severity', label: 'ความรุนแรง', labels: SEVERITY_LABELS },
+      { key: 'status', label: 'สถานะ', labels: PEST_STATUS_LABELS },
     ],
     createFields: [
       {
@@ -287,7 +306,7 @@ const resourceConfigs = {
       { key: 'treatment', label: 'การรักษา', type: 'textarea' },
       {
         key: 'status', label: 'สถานะ', type: 'select',
-        options: [{ value: 'open', label: 'open' }, { value: 'treated', label: 'treated' }, { value: 'resolved', label: 'resolved' }],
+        options: [{ value: 'open', label: 'เปิด' }, { value: 'treated', label: 'กำลังรักษา' }, { value: 'resolved', label: 'แก้ไขแล้ว' }],
       },
     ],
     canDelete: false,

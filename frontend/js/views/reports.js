@@ -4,7 +4,7 @@ function reportTable(rows, columns) {
     <table class="data-table small">
       <thead><tr>${columns.map((c) => `<th>${c.label}</th>`).join('')}</tr></thead>
       <tbody>
-        ${rows.map((r) => `<tr>${columns.map((c) => `<td>${formatDateCell(r[c.key])}</td>`).join('')}</tr>`).join('')}
+        ${rows.map((r) => `<tr>${columns.map((c) => `<td>${formatCellValue(c, r)}</td>`).join('')}</tr>`).join('')}
       </tbody>
     </table>
   `;
@@ -28,10 +28,10 @@ async function renderReports(container) {
       <form id="plan-report-form" class="inline-form">
         <select name="status">
           <option value="">-- ทุกสถานะ --</option>
-          <option value="draft">draft</option>
-          <option value="pending_approval">pending_approval</option>
-          <option value="approved">approved</option>
-          <option value="rejected">rejected</option>
+          <option value="draft">${WORKFLOW_STATUS_LABELS.draft}</option>
+          <option value="pending_approval">${WORKFLOW_STATUS_LABELS.pending_approval}</option>
+          <option value="approved">${WORKFLOW_STATUS_LABELS.approved}</option>
+          <option value="rejected">${WORKFLOW_STATUS_LABELS.rejected}</option>
         </select>
         <input type="date" name="fromDate" />
         <input type="date" name="toDate" />
@@ -45,20 +45,20 @@ async function renderReports(container) {
       <form id="pest-report-form" class="inline-form">
         <select name="issueType">
           <option value="">-- ทุกประเภท --</option>
-          <option value="disease">disease</option>
-          <option value="pest">pest</option>
+          <option value="disease">${ISSUE_TYPE_LABELS.disease}</option>
+          <option value="pest">${ISSUE_TYPE_LABELS.pest}</option>
         </select>
         <select name="severity">
           <option value="">-- ทุกความรุนแรง --</option>
-          <option value="low">low</option>
-          <option value="medium">medium</option>
-          <option value="high">high</option>
+          <option value="low">${SEVERITY_LABELS.low}</option>
+          <option value="medium">${SEVERITY_LABELS.medium}</option>
+          <option value="high">${SEVERITY_LABELS.high}</option>
         </select>
         <select name="status">
           <option value="">-- ทุกสถานะ --</option>
-          <option value="open">open</option>
-          <option value="treated">treated</option>
-          <option value="resolved">resolved</option>
+          <option value="open">${PEST_STATUS_LABELS.open}</option>
+          <option value="treated">${PEST_STATUS_LABELS.treated}</option>
+          <option value="resolved">${PEST_STATUS_LABELS.resolved}</option>
         </select>
         <button type="submit">กรอง</button>
       </form>
@@ -75,7 +75,7 @@ async function renderReports(container) {
       const data = await api.get(`/reports/seedling-traceability/${id}`);
       resultEl.innerHTML = `
         <div class="detail-fields">
-          <div><strong>ต้นกล้า:</strong> ${escapeHtml(data.seedling_code)} (${escapeHtml(data.current_status)})</div>
+          <div><strong>ต้นกล้า:</strong> ${escapeHtml(data.seedling_code)} (${escapeHtml(SEEDLING_STATUS_LABELS[data.current_status] || data.current_status)})</div>
           <div><strong>แผนการเพาะพันธุ์:</strong> ${escapeHtml(data.plan_code)} — ${escapeHtml(data.plan_objective)}</div>
           <div><strong>ต้นพ่อพันธุ์:</strong> ${escapeHtml(data.father_tree_code)} (${escapeHtml(data.father_variety)})</div>
           <div><strong>ต้นแม่พันธุ์:</strong> ${escapeHtml(data.mother_tree_code)} (${escapeHtml(data.mother_variety)})</div>
@@ -86,9 +86,9 @@ async function renderReports(container) {
         <h4>ประวัติการดูแล</h4>
         ${reportTable(data.careRecords, [{ key: 'care_date', label: 'วันที่' }, { key: 'activity_type', label: 'กิจกรรม' }, { key: 'height_cm', label: 'สูง (ซม.)' }, { key: 'leaf_count', label: 'ใบ' }])}
         <h4>ประวัติโรค/แมลง</h4>
-        ${reportTable(data.pestDiseaseRecords, [{ key: 'found_date', label: 'วันที่พบ' }, { key: 'issue_type', label: 'ประเภท' }, { key: 'issue_name', label: 'ชื่อ' }, { key: 'severity', label: 'ความรุนแรง' }, { key: 'status', label: 'สถานะ' }])}
+        ${reportTable(data.pestDiseaseRecords, [{ key: 'found_date', label: 'วันที่พบ' }, { key: 'issue_type', label: 'ประเภท', labels: ISSUE_TYPE_LABELS }, { key: 'issue_name', label: 'ชื่อ' }, { key: 'severity', label: 'ความรุนแรง', labels: SEVERITY_LABELS }, { key: 'status', label: 'สถานะ', labels: PEST_STATUS_LABELS }])}
         <h4>ประวัติการประเมินคุณภาพ</h4>
-        ${reportTable(data.evaluations, [{ key: 'evaluation_date', label: 'วันที่ประเมิน' }, { key: 'overall_grade', label: 'เกรด' }, { key: 'status', label: 'สถานะ' }])}
+        ${reportTable(data.evaluations, [{ key: 'evaluation_date', label: 'วันที่ประเมิน' }, { key: 'overall_grade', label: 'เกรด' }, { key: 'status', label: 'สถานะ', labels: WORKFLOW_STATUS_LABELS }])}
       `;
     } catch (err) {
       resultEl.innerHTML = `<p class="error">${err.message}</p>`;
@@ -104,9 +104,9 @@ async function renderReports(container) {
       const data = await api.get(`/reports/breeding-plans?${params}`);
       resultEl.innerHTML = `
         <h4>สรุปตามสถานะ</h4>
-        ${reportTable(data.summary, [{ key: 'status', label: 'สถานะ' }, { key: 'total', label: 'จำนวน' }])}
+        ${reportTable(data.summary, [{ key: 'status', label: 'สถานะ', labels: WORKFLOW_STATUS_LABELS }, { key: 'total', label: 'จำนวน' }])}
         <h4>รายการแผน</h4>
-        ${reportTable(data.plans, [{ key: 'plan_code', label: 'รหัสแผน' }, { key: 'status', label: 'สถานะ' }, { key: 'father_tree_code', label: 'พ่อพันธุ์' }, { key: 'mother_tree_code', label: 'แม่พันธุ์' }, { key: 'pollination_count', label: 'จำนวนครั้งผสมเกสร' }])}
+        ${reportTable(data.plans, [{ key: 'plan_code', label: 'รหัสแผน' }, { key: 'status', label: 'สถานะ', labels: WORKFLOW_STATUS_LABELS }, { key: 'father_tree_code', label: 'พ่อพันธุ์' }, { key: 'mother_tree_code', label: 'แม่พันธุ์' }, { key: 'pollination_count', label: 'จำนวนครั้งผสมเกสร' }])}
       `;
     } catch (err) {
       resultEl.innerHTML = `<p class="error">${err.message}</p>`;
@@ -122,9 +122,9 @@ async function renderReports(container) {
       const data = await api.get(`/reports/pest-disease?${params}`);
       resultEl.innerHTML = `
         <h4>สรุป</h4>
-        ${reportTable(data.summary, [{ key: 'issue_type', label: 'ประเภท' }, { key: 'severity', label: 'ความรุนแรง' }, { key: 'status', label: 'สถานะ' }, { key: 'total', label: 'จำนวน' }])}
+        ${reportTable(data.summary, [{ key: 'issue_type', label: 'ประเภท', labels: ISSUE_TYPE_LABELS }, { key: 'severity', label: 'ความรุนแรง', labels: SEVERITY_LABELS }, { key: 'status', label: 'สถานะ', labels: PEST_STATUS_LABELS }, { key: 'total', label: 'จำนวน' }])}
         <h4>รายการ</h4>
-        ${reportTable(data.records, [{ key: 'seedling_code', label: 'ต้นกล้า' }, { key: 'found_date', label: 'วันที่พบ' }, { key: 'issue_name', label: 'ชื่อปัญหา' }, { key: 'severity', label: 'ความรุนแรง' }, { key: 'status', label: 'สถานะ' }])}
+        ${reportTable(data.records, [{ key: 'seedling_code', label: 'ต้นกล้า' }, { key: 'found_date', label: 'วันที่พบ' }, { key: 'issue_name', label: 'ชื่อปัญหา' }, { key: 'severity', label: 'ความรุนแรง', labels: SEVERITY_LABELS }, { key: 'status', label: 'สถานะ', labels: PEST_STATUS_LABELS }])}
       `;
     } catch (err) {
       resultEl.innerHTML = `<p class="error">${err.message}</p>`;

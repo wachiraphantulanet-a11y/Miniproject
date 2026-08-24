@@ -3,11 +3,13 @@ const { logActivity } = require('../utils/activityLog');
 const { notifyUser } = require('../utils/notify');
 
 const PLAN_STATUSES = ['draft', 'pending_approval', 'approved', 'rejected'];
-const EDITABLE_STATUSES = ['draft', 'rejected']; // แก้ไขแผนได้เฉพาะตอนยังไม่ส่งอนุมัติ หรือถูกปฏิเสธแล้ว (Gap 3: loop กลับ)
+// แก้ไข/ยื่นอนุมัติได้เฉพาะตอนยังเป็น draft เท่านั้น — แผนที่ถูกปฏิเสธถือเป็นสถานะจบ (terminal)
+// ห้ามแก้ไขหรือยื่นซ้ำ ถ้าต้องการแก้ไขจริงให้สร้างแผนใหม่ (createBreedingPlan พร้อม revisedFromPlanId)
+const EDITABLE_STATUSES = ['draft'];
 
 const PLAN_SELECT = `
   SELECT p.plan_id, p.plan_code, p.objective, p.planned_start_date, p.planned_end_date,
-         p.status, p.created_by, p.created_at, p.updated_at,
+         p.status, p.created_by, p.revised_from_plan_id, p.created_at, p.updated_at,
          f.tree_id AS father_tree_id, f.tree_code AS father_tree_code,
          m.tree_id AS mother_tree_id, m.tree_code AS mother_tree_code
   FROM breeding_plans p
@@ -81,9 +83,13 @@ async function getBreedingPlan(req, res) {
   }
 }
 
-/** POST /api/breeding-plans — admin, staff (สร้างเป็น draft เสมอ) */
+/**
+ * POST /api/breeding-plans — admin, staff (สร้างเป็น draft เสมอ)
+ * ถ้าเป็นการแก้ไขแผนที่เคยถูกปฏิเสธ ให้ส่ง revisedFromPlanId มาด้วยเพื่อสืบสายย้อนกลับไปแผนเดิม
+ * (แผนที่ถูกปฏิเสธเป็นสถานะจบ แก้ไข/ยื่นซ้ำแผนเดิมไม่ได้แล้ว ต้องสร้างแผนใหม่เสมอ)
+ */
 async function createBreedingPlan(req, res) {
-  const { planCode, fatherTreeId, motherTreeId, objective, plannedStartDate, plannedEndDate } = req.body;
+  const { planCode, fatherTreeId, motherTreeId, objective, plannedStartDate, plannedEndDate, revisedFromPlanId } = req.body;
 
   if (!planCode || !fatherTreeId || !motherTreeId) {
     return res.status(400).json({ message: 'กรุณากรอกข้อมูลให้ครบ (planCode, fatherTreeId, motherTreeId)' });
@@ -96,11 +102,19 @@ async function createBreedingPlan(req, res) {
     const [existingCode] = await pool.query('SELECT plan_id FROM breeding_plans WHERE plan_code = ?', [planCode]);
     if (existingCode[0]) return res.status(409).json({ message: 'มีรหัสแผนนี้อยู่แล้วในระบบ' });
 
+    if (revisedFromPlanId) {
+      const [prev] = await pool.query('SELECT status FROM breeding_plans WHERE plan_id = ?', [revisedFromPlanId]);
+      if (!prev[0]) return res.status(400).json({ message: 'ไม่พบแผนเดิมที่อ้างอิง (revisedFromPlanId)' });
+      if (prev[0].status !== 'rejected') {
+        return res.status(409).json({ message: 'อ้างอิงแผนเดิมได้เฉพาะแผนที่ถูกปฏิเสธเท่านั้น' });
+      }
+    }
+
     const [result] = await pool.query(
       `INSERT INTO breeding_plans
-         (plan_code, father_tree_id, mother_tree_id, objective, planned_start_date, planned_end_date, status, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, 'draft', ?)`,
-      [planCode, fatherTreeId, motherTreeId, objective || null, plannedStartDate || null, plannedEndDate || null, req.user.userId]
+         (plan_code, father_tree_id, mother_tree_id, objective, planned_start_date, planned_end_date, status, created_by, revised_from_plan_id)
+       VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, ?)`,
+      [planCode, fatherTreeId, motherTreeId, objective || null, plannedStartDate || null, plannedEndDate || null, req.user.userId, revisedFromPlanId || null]
     );
 
     await logActivity({
@@ -108,7 +122,9 @@ async function createBreedingPlan(req, res) {
       action: 'CREATE',
       tableName: 'breeding_plans',
       recordId: result.insertId,
-      detail: `สร้างแผนการเพาะพันธุ์ ${planCode}`,
+      detail: revisedFromPlanId
+        ? `สร้างแผนการเพาะพันธุ์ ${planCode} แทนแผนที่ถูกปฏิเสธ (plan_id=${revisedFromPlanId})`
+        : `สร้างแผนการเพาะพันธุ์ ${planCode}`,
     });
 
     return res.status(201).json({ planId: result.insertId, planCode, status: 'draft' });
@@ -129,7 +145,9 @@ async function updateBreedingPlan(req, res) {
 
     if (!EDITABLE_STATUSES.includes(existing[0].status)) {
       return res.status(409).json({
-        message: 'แก้ไขแผนนี้ไม่ได้ เนื่องจากอยู่ระหว่างรออนุมัติหรืออนุมัติแล้ว',
+        message: existing[0].status === 'rejected'
+          ? 'แผนนี้ถูกปฏิเสธแล้ว แก้ไขไม่ได้ กรุณาสร้างแผนใหม่แทน'
+          : 'แก้ไขแผนนี้ไม่ได้ เนื่องจากอยู่ระหว่างรออนุมัติหรืออนุมัติแล้ว',
       });
     }
 
@@ -185,7 +203,11 @@ async function submitBreedingPlan(req, res) {
     if (!existing[0]) return res.status(404).json({ message: 'ไม่พบแผนการเพาะพันธุ์นี้' });
 
     if (!EDITABLE_STATUSES.includes(existing[0].status)) {
-      return res.status(409).json({ message: 'ส่งแผนนี้ไม่ได้ เนื่องจากอยู่ระหว่างรออนุมัติหรืออนุมัติแล้ว' });
+      return res.status(409).json({
+        message: existing[0].status === 'rejected'
+          ? 'แผนนี้ถูกปฏิเสธแล้ว ส่งซ้ำไม่ได้ กรุณาสร้างแผนใหม่แทน'
+          : 'ส่งแผนนี้ไม่ได้ เนื่องจากอยู่ระหว่างรออนุมัติหรืออนุมัติแล้ว',
+      });
     }
 
     await pool.query(`UPDATE breeding_plans SET status = 'pending_approval' WHERE plan_id = ?`, [id]);

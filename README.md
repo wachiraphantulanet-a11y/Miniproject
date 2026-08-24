@@ -124,15 +124,14 @@ import schema.sql ตัวใหม่ (ที่มี `SET NAMES utf8mb4;` �
 | 2 (D1) | GET/POST/PUT | `/api/users`, `/api/users/:id`, `/api/users/:id/password` | admin | จัดการผู้ใช้งาน |
 | 2 (D2) | GET/POST/PUT/DELETE | `/api/varieties`, `/api/varieties/:id` | login / **admin เท่านั้น** | พันธุ์มะม่วง (เพิ่ม/แก้ไข/ลบจำกัดเฉพาะ admin) |
 | 2 (D3) | GET/POST/PUT | `/api/parent-trees`, `/api/parent-trees/:id` | login / **admin เท่านั้น** | ต้นพ่อ-แม่พันธุ์ (เพิ่ม/แก้ไขจำกัดเฉพาะ admin, ลบไม่ได้ ใช้เปลี่ยน status แทน) |
-| 3 (D4) | GET/POST/PUT | `/api/breeding-plans`, `/:id` | login / admin,staff | สร้าง/แก้ไขแผน (แก้ได้เฉพาะ draft/rejected) |
-| 3 (D4) | POST | `/api/breeding-plans/:id/submit` | admin,staff | ส่งแผนรออนุมัติ |
+| 3 (D4) | GET/POST/PUT | `/api/breeding-plans`, `/:id` | login / admin,staff | สร้าง/แก้ไขแผน (แก้ไข/ยื่นซ้ำได้เฉพาะตอน `draft` เท่านั้น — `rejected` เป็นสถานะจบ ดู "แผนถูกปฏิเสธ = สถานะจบ" ด้านล่าง) |
+| 3 (D4) | POST | `/api/breeding-plans/:id/submit` | admin,staff | ส่งแผนรออนุมัติ (ใช้ได้เฉพาะตอน `draft`) |
 | 3 (D4) | POST | `/api/breeding-plans/:id/decide` | admin,owner | อนุมัติ/ปฏิเสธแผน (บันทึกประวัติทุกรอบ) |
 | 4 (D5) | GET/POST/PUT | `/api/pollinations`, `/api/fruit-sets` | login / admin,staff | บันทึกผสมเกสร (เฉพาะแผนที่ approved) และติดผล |
-| 5 (D6) | GET/POST/PUT | `/api/seeds`, `/api/seedlings` | login / admin,staff | บันทึกเมล็ดพันธุ์และต้นกล้า |
+| 5 (D6) | GET/POST/PUT | `/api/seeds`, `/api/seedlings` | login / admin,staff | บันทึกเมล็ดพันธุ์ (เกรด A/B/C/D) และต้นกล้า |
 | 6 (D7) | GET/POST/PUT | `/api/care-records` | login / admin,staff | บันทึกการดูแล/เจริญเติบโต |
 | 6 (D8) | GET/POST/PUT | `/api/pest-disease-records` | login / admin,staff | บันทึกโรค/แมลง (ผูกกับต้นกล้า + care record ได้) |
-| 7 (D9) | GET/POST/PUT | `/api/quality-evaluations`, `/:id` | login / admin,staff | ประเมินคุณภาพ (แก้ได้เฉพาะตอน rejected) |
-| 7 (D9) | POST | `/api/quality-evaluations/:id/submit` | admin,staff | ส่งผลประเมินกลับเข้ารออนุมัติ |
+| 7 (D9) | GET/POST | `/api/quality-evaluations`, `/:id` | login / admin,staff | ประเมินคุณภาพ (เกรด A/B/C/D) — record ไม่แก้ไขหลังสร้าง (ไม่มี PUT/submit) ถ้าถูกปฏิเสธต้องสร้างรายการใหม่แทน |
 | 7 (D9) | POST | `/api/quality-evaluations/:id/decide` | admin,owner | อนุมัติ/ปฏิเสธผลประเมิน |
 | 8 | GET | `/api/reports/summary` | login | ภาพรวม dashboard ทั้งระบบ |
 | 8 | GET | `/api/reports/breeding-plans` | login | รายงานแผน (filter status/ช่วงวันที่) |
@@ -265,6 +264,40 @@ npm test
 ต้นพ่อ-แม่พันธุ์ (ไม่มีฟอร์มสร้าง/ปุ่มแก้ไข-ลบ) แต่ยังเขียนหน้าอื่นได้ปกติ, login error message
 ถูกต้อง, animation แสดงผลตามที่ตั้งใจ automated tests อัปเดตตามด้วย (RBAC test ปรับให้ตรงกับ
 กติกาใหม่ + เพิ่มเทสต์ยืนยันว่า resource อื่นไม่ได้ถูกจำกัดเกินขอบเขต) รวมเป็น 52/52 ผ่าน
+
+## แผน/ผลประเมินที่ถูกปฏิเสธเป็นสถานะจบ, รวมเกรดต้นกล้าเป็น A/B/C/D, แก้ภาษาไทย/อังกฤษปนกันทั้งระบบ (2026-08-24)
+
+**1. แผนการเพาะพันธุ์ (D4) และผลประเมินคุณภาพ (D9) ที่ถูกปฏิเสธ (`rejected`) เป็นสถานะจบ (terminal)**
+เดิมแก้ไขแล้วยื่นซ้ำรายการเดิมได้ (loop กลับ) ทำให้ข้อมูล ณ ตอนที่ถูกปฏิเสธถูกเขียนทับ ตรวจสอบ
+ย้อนหลังไม่ได้ว่าผู้อนุมัติเห็นข้อมูลอะไรตอนตัดสินใจ — เปลี่ยนเป็น: ถ้าต้องการแก้ไขจริงต้อง **สร้าง
+รายการใหม่** แทน โดยส่ง `revisedFromPlanId` (แผน) หรือ `revisedFromEvaluationId` (ผลประเมิน) เพื่อสืบ
+สายย้อนกลับไปรายการเดิมที่ถูกปฏิเสธ (คอลัมน์ `revised_from_plan_id` / `revised_from_evaluation_id`
+ใน `schema.sql`, ตรวจสอบว่ารายการที่อ้างอิงต้องเป็น `rejected` เท่านั้น)
+- `breeding_plans`: แก้ไข/ส่งอนุมัติได้เฉพาะตอน `draft` เท่านั้น (`EDITABLE_STATUSES = ['draft']`)
+- `quality_evaluations`: ไม่มีสถานะ `draft` (สร้างแล้วเข้า `pending_approval` ทันที) — เอา endpoint
+  `PUT` และ `POST /:id/submit` ออกทั้งหมด เพราะมีไว้สำหรับ loop กลับหลังถูกปฏิเสธเท่านั้น ตอนนี้ record
+  ไม่แก้ไขหลังสร้างอีกต่อไป
+- ฝั่ง UI (`workflow.js`): ตัดปุ่ม "ส่งเข้ารออนุมัติอีกครั้ง" ออก แทนที่ด้วยข้อความแจ้งสถานะจบ +
+  ปุ่ม "สร้างรายการใหม่โดยอ้างอิงรายการนี้" (prefill ฟอร์มสร้างใหม่จากข้อมูลเดิมให้อัตโนมัติ)
+
+**2. เกรดผลประเมินคุณภาพต้นกล้า (D9) เปลี่ยนจาก `A/B/C/fail` เป็น `A/B/C/D`**
+ให้ตรงกับเกรดเมล็ดพันธุ์ (D6, `seeds.quality_grade`) ที่เป็น A/B/C/D อยู่แล้ว ลดความสับสนเรื่องเกรด
+สองชุดไม่ตรงกัน — จุดที่ใช้เช็คเกรดตกในโค้ด (`overall_grade === 'fail'` → ต้นกล้าเป็น `rejected`)
+เปลี่ยนเป็นเช็ค `=== 'D'` แทน อัปเดตทั้ง `schema.sql` (enum), backend controller, และ dropdown
+ฝั่ง frontend พร้อมปรับฐานข้อมูล dev จริงด้วย `ALTER TABLE` แล้ว
+
+**3. แก้ภาษาไทย/อังกฤษแสดงผลไม่ตรงกันทั้งระบบ**
+ก่อนหน้านี้บางหน้าฟอร์มเพิ่ม/แก้ไขใช้ตัวเลือกภาษาไทย (เช่น อนุมัติ/ปฏิเสธ, ต่ำ/ปานกลาง/สูง) แต่ตาราง/
+badge ที่แสดงผลกลับโชว์ค่า enum ภาษาอังกฤษดิบๆ (เช่น `rejected`, `low`, `father`) — เพิ่มกลไกกลาง
+`formatCellValue()` ใน `frontend/js/crud.js` พร้อมชุดคำแปล (`WORKFLOW_STATUS_LABELS`,
+`DECISION_LABELS`, `ACCOUNT_STATUS_LABELS`, `ACTIVITY_ACTION_LABELS` และใน `resources.js`:
+`TREE_TYPE_LABELS`, `ISSUE_TYPE_LABELS`, `SEVERITY_LABELS`, `PEST_STATUS_LABELS`,
+`TREE_STATUS_LABELS`, `SEEDLING_STATUS_LABELS`) ใช้ร่วมกันทุกหน้าที่แสดงค่าพวกนี้ — ตาราง/badge/
+dropdown กรองในหน้า workflow (แผน/ผลประเมิน), แดชบอร์ด, รายงานทุกประเภท, จัดการผู้ใช้งาน,
+audit trail, ต้นพ่อ-แม่พันธุ์, ต้นกล้า, โรค/แมลง ตอนนี้แสดงเป็นภาษาไทยตรงกับฟอร์มทั้งหมด
+
+ทดสอบแล้ว: `node --check` ผ่านทุกไฟล์ frontend ที่แก้ และ backend automated tests (52/52 ผ่าน)
+ไม่มีเทสต์ใดอิงกับ endpoint ที่ถูกลบ (`PUT`/`submit` ของ quality-evaluations) หรือค่าเกรด `fail`
 
 ## ยังไม่ได้ทำ
 - **ทดสอบ UI ทีละหน้าที่เหลือ** (ผสมเกสร, ติดผล, เมล็ดพันธุ์, ต้นกล้า, การดูแล, โรค/แมลง)

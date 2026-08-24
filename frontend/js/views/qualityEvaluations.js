@@ -27,20 +27,14 @@ const qualityEvaluationConfig = {
     { key: 'overallScore', label: 'คะแนนรวม (0-100)', type: 'number' },
     {
       key: 'overallGrade', label: 'เกรด', type: 'select', required: true,
-      options: [{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'C', label: 'C' }, { value: 'fail', label: 'fail' }],
+      options: [{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'C', label: 'C' }, { value: 'D', label: 'D' }],
     },
     { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
   ],
-  editFields: [
-    { key: 'evaluationDate', label: 'วันที่ประเมิน', type: 'date' },
-    { key: 'overallScore', label: 'คะแนนรวม (0-100)', type: 'number' },
-    {
-      key: 'overallGrade', label: 'เกรด', type: 'select',
-      options: [{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'C', label: 'C' }, { value: 'fail', label: 'fail' }],
-    },
-    { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
-  ],
-  editableStatuses: ['rejected'],
+  // ผลประเมินแก้ไขไม่ได้หลังสร้าง (ไม่มี PUT endpoint) — ถ้าถูกปฏิเสธ (สถานะจบ) ต้องสร้างรายการใหม่แทน
+  editFields: [],
+  editableStatuses: [],
+  revisedFromKey: 'revisedFromEvaluationId',
   decideRoles: ['admin', 'owner'],
 };
 

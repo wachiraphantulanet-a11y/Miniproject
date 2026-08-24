@@ -22,6 +22,37 @@ function formatDateCell(value) {
   return escapeHtml(formatDateValue(value));
 }
 
+// ป้ายกำกับภาษาไทยของค่า enum ที่ใช้ร่วมกันหลายหน้า (สถานะแผน/ผลประเมิน, การอนุมัติ/ปฏิเสธ,
+// สถานะบัญชีผู้ใช้, ประเภทกิจกรรมใน audit log) — ใช้กับทั้ง badge และ col.labels ของตาราง
+const WORKFLOW_STATUS_LABELS = {
+  draft: 'ฉบับร่าง',
+  pending_approval: 'รออนุมัติ',
+  approved: 'อนุมัติแล้ว',
+  rejected: 'ถูกปฏิเสธ',
+};
+const DECISION_LABELS = { approved: 'อนุมัติ', rejected: 'ปฏิเสธ' };
+const ACCOUNT_STATUS_LABELS = { active: 'ใช้งาน', inactive: 'ระงับบัญชี' };
+const ACTIVITY_ACTION_LABELS = {
+  CREATE: 'สร้าง',
+  UPDATE: 'แก้ไข',
+  SUBMIT: 'ส่งอนุมัติ',
+  APPROVE: 'อนุมัติ',
+  REJECT: 'ปฏิเสธ',
+  DELETE: 'ลบ',
+  LOGIN: 'เข้าสู่ระบบ',
+  RESET_PASSWORD: 'ตั้งรหัสผ่านใหม่',
+};
+
+// สำหรับ listColumns ที่เก็บค่าเป็นโค้ดภาษาอังกฤษ (enum) แต่อยากแสดงเป็นภาษาไทยในตาราง
+// ให้ตรงกับ label ที่ใช้ในฟอร์มเพิ่ม/แก้ไข — ใส่ col.labels = { value: 'ป้ายกำกับ' }
+function formatCellValue(col, row) {
+  const raw = row[col.key];
+  if (col.labels && raw != null && col.labels[raw] != null) {
+    return escapeHtml(col.labels[raw]);
+  }
+  return formatDateCell(raw);
+}
+
 // ค่าพิเศษของ select ที่แปลว่า "ผู้ใช้เลือกกรอกเอง" — ใช้กับ field type 'select-with-other'
 const OTHER_OPTION_VALUE = '__other__';
 
@@ -168,7 +199,7 @@ async function renderCrudView(container, config) {
         <tbody>
           ${rows.map((row) => `
             <tr data-id="${row[idKey]}">
-              ${listColumns.map((c) => `<td>${formatDateCell(row[c.key])}</td>`).join('')}
+              ${listColumns.map((c) => `<td>${formatCellValue(c, row)}</td>`).join('')}
               ${(canEdit || canDelete) ? `
                 <td class="row-actions">
                   ${canEdit ? '<button type="button" class="btn-edit">แก้ไข</button>' : ''}

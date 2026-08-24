@@ -22,7 +22,7 @@ const userEditFields = [
   },
   {
     key: 'status', label: 'สถานะ', type: 'select',
-    options: [{ value: 'active', label: 'active' }, { value: 'inactive', label: 'inactive (ระงับบัญชี)' }],
+    options: [{ value: 'active', label: 'ใช้งาน' }, { value: 'inactive', label: 'ระงับบัญชี' }],
   },
 ];
 
@@ -46,7 +46,7 @@ async function renderUsers(container) {
               <td>${escapeHtml(r.username)}</td>
               <td>${escapeHtml(r.full_name)}</td>
               <td>${escapeHtml(r.role_name)}</td>
-              <td><span class="badge badge-${r.status}">${r.status}</span></td>
+              <td><span class="badge badge-${r.status}">${escapeHtml(ACCOUNT_STATUS_LABELS[r.status] || r.status)}</span></td>
               <td class="row-actions">
                 <button type="button" class="btn-edit">แก้ไข</button>
                 <button type="button" class="btn-reset-pw">ตั้งรหัสผ่านใหม่</button>

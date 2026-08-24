@@ -40,7 +40,8 @@ const breedingPlanConfig = {
     { key: 'plannedStartDate', label: 'วันที่เริ่มแผน', type: 'date' },
     { key: 'plannedEndDate', label: 'วันที่สิ้นสุดแผน', type: 'date' },
   ],
-  editableStatuses: ['draft', 'rejected'],
+  editableStatuses: ['draft'],
+  revisedFromKey: 'revisedFromPlanId',
   decideRoles: ['admin', 'owner'],
 };
 
