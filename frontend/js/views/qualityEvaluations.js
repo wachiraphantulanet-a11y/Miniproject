@@ -21,9 +21,9 @@ const qualityEvaluationConfig = {
   createFields: [
     {
       key: 'seedlingId', label: 'ต้นกล้า', type: 'select', required: true,
-      options: () => loadOptions('/seedlings', 'seedling_id', (r) => r.seedling_code),
+      options: () => loadOptionsWithDate('/seedlings', 'seedling_id', (r) => r.seedling_code, 'germination_date'),
     },
-    { key: 'evaluationDate', label: 'วันที่ประเมิน', type: 'date', required: true },
+    { key: 'evaluationDate', label: 'วันที่ประเมิน', type: 'date', required: true, dateMinFrom: 'seedlingId' },
     { key: 'overallScore', label: 'คะแนนรวม (0-100)', type: 'number' },
     {
       key: 'overallGrade', label: 'เกรด', type: 'select', required: true,

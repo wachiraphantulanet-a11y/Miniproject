@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { logActivity } = require('../utils/activityLog');
+const { isBeforeDate } = require('../utils/dateOrder');
 
 const QUALITY_GRADES = ['A', 'B', 'C', 'D'];
 
@@ -55,8 +56,12 @@ async function createSeed(req, res) {
   }
 
   try {
-    const [fruitSet] = await pool.query('SELECT fruit_set_id FROM fruit_set_records WHERE fruit_set_id = ?', [fruitSetId]);
+    const [fruitSet] = await pool.query('SELECT fruit_set_id, observed_date FROM fruit_set_records WHERE fruit_set_id = ?', [fruitSetId]);
     if (!fruitSet[0]) return res.status(400).json({ message: 'ไม่พบบันทึกการติดผลที่ระบุ (fruitSetId)' });
+
+    if (collectedDate && isBeforeDate(collectedDate, fruitSet[0].observed_date)) {
+      return res.status(400).json({ message: 'วันที่เก็บเมล็ดต้องไม่ก่อนวันที่สังเกตการติดผล' });
+    }
 
     const [result] = await pool.query(
       `INSERT INTO seeds (fruit_set_id, collected_date, seed_count, quality_grade, notes, recorded_by)
@@ -89,8 +94,18 @@ async function updateSeed(req, res) {
   }
 
   try {
-    const [existing] = await pool.query('SELECT seed_id FROM seeds WHERE seed_id = ?', [id]);
+    const [existing] = await pool.query(
+      `SELECT s.seed_id, fs.observed_date
+       FROM seeds s
+       JOIN fruit_set_records fs ON fs.fruit_set_id = s.fruit_set_id
+       WHERE s.seed_id = ?`,
+      [id]
+    );
     if (!existing[0]) return res.status(404).json({ message: 'ไม่พบบันทึกเมล็ดพันธุ์นี้' });
+
+    if (collectedDate && isBeforeDate(collectedDate, existing[0].observed_date)) {
+      return res.status(400).json({ message: 'วันที่เก็บเมล็ดต้องไม่ก่อนวันที่สังเกตการติดผล' });
+    }
 
     await pool.query(
       `UPDATE seeds SET

@@ -51,6 +51,7 @@ async function renderWorkflowList(container, cfg) {
       </form>
     `;
     wireDynamicFields(area.querySelector('#wf-create-form'), createFields);
+    wireDateMinFields(area.querySelector('#wf-create-form'), createFields);
     sessionStorage.removeItem(WF_PREFILL_KEY);
     area.querySelector('#wf-create-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -150,6 +151,7 @@ async function renderWorkflowDetail(container, cfg, id) {
         </form>
       `);
       wireDynamicFields(modalBox.querySelector('#wf-edit-form'), editFields);
+      wireDateMinFields(modalBox.querySelector('#wf-edit-form'), editFields);
       modalBox.querySelector('#wf-edit-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         try {

@@ -85,6 +85,29 @@ describe('D4: แผนการเพาะพันธุ์ + workflow อน
     expect(res.status).toBe(400);
   });
 
+  it('วันที่สิ้นสุดแผนก่อนวันที่เริ่มแผน → 400', async () => {
+    const res = await auth(request(app).post('/api/breeding-plans')).send({
+      planCode: `BAD-DATE-PLAN-${ts}`,
+      fatherTreeId: ids.fatherTreeId,
+      motherTreeId: ids.motherTreeId,
+      plannedStartDate: '2026-09-10',
+      plannedEndDate: '2026-09-01',
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('แก้ไขแผนให้วันที่สิ้นสุดก่อนวันที่เริ่ม (เทียบกับค่าเดิมที่ยังไม่แก้) → 400', async () => {
+    const setStart = await auth(request(app).put(`/api/breeding-plans/${ids.planId}`)).send({
+      plannedStartDate: '2026-09-10',
+    });
+    expect(setStart.status).toBe(200);
+
+    const res = await auth(request(app).put(`/api/breeding-plans/${ids.planId}`)).send({
+      plannedEndDate: '2026-09-01',
+    });
+    expect(res.status).toBe(400);
+  });
+
   it('บันทึกผสมเกสรไม่ได้ถ้าแผนยังไม่อนุมัติ → 409', async () => {
     const res = await auth(request(app).post('/api/pollinations')).send({
       planId: ids.planId,
@@ -140,6 +163,15 @@ describe('D5: ผสมเกสร และการติดผล', () => {
     expect(res.status).toBe(201);
     expect(Number(res.body.fruitSetRate)).toBeCloseTo(40, 1);
     ids.fruitSetId = res.body.fruitSetId;
+  });
+
+  it('วันที่สังเกตติดผลก่อนวันที่ผสมเกสร → 400', async () => {
+    const res = await auth(request(app).post('/api/fruit-sets')).send({
+      pollinationId: ids.pollinationId,
+      observedDate: '2026-09-01', // ก่อน pollinationDate (2026-09-02)
+      fruitCount: 10,
+    });
+    expect(res.status).toBe(400);
   });
 });
 

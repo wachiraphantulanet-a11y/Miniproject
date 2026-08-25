@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { logActivity } = require('../utils/activityLog');
+const { isBeforeDate } = require('../utils/dateOrder');
 
 const FRUIT_SET_SELECT = `
   SELECT fs.fruit_set_id, fs.pollination_id, r.plan_id, fs.observed_date, fs.fruit_count,
@@ -58,10 +59,14 @@ async function createFruitSet(req, res) {
 
   try {
     const [pollination] = await pool.query(
-      'SELECT flower_count FROM pollination_records WHERE pollination_id = ?',
+      'SELECT flower_count, pollination_date FROM pollination_records WHERE pollination_id = ?',
       [pollinationId]
     );
     if (!pollination[0]) return res.status(400).json({ message: 'ไม่พบบันทึกการผสมเกสรที่ระบุ (pollinationId)' });
+
+    if (isBeforeDate(observedDate, pollination[0].pollination_date)) {
+      return res.status(400).json({ message: 'วันที่สังเกตต้องไม่ก่อนวันที่ผสมเกสร' });
+    }
 
     // ถ้าไม่ได้ส่ง fruitSetRate มา คำนวณให้อัตโนมัติจาก fruit_count / flower_count * 100
     if (fruitSetRate == null) {
@@ -97,13 +102,17 @@ async function updateFruitSet(req, res) {
 
   try {
     const [existing] = await pool.query(
-      `SELECT fs.pollination_id, fs.fruit_count, r.flower_count
+      `SELECT fs.pollination_id, fs.fruit_count, r.flower_count, r.pollination_date
        FROM fruit_set_records fs
        JOIN pollination_records r ON r.pollination_id = fs.pollination_id
        WHERE fs.fruit_set_id = ?`,
       [id]
     );
     if (!existing[0]) return res.status(404).json({ message: 'ไม่พบบันทึกการติดผลนี้' });
+
+    if (observedDate && isBeforeDate(observedDate, existing[0].pollination_date)) {
+      return res.status(400).json({ message: 'วันที่สังเกตต้องไม่ก่อนวันที่ผสมเกสร' });
+    }
 
     // ถ้าไม่ได้ส่ง fruitSetRate มาแต่มีการแก้ fruitCount ให้คำนวณอัตราใหม่อัตโนมัติ
     if (fruitSetRate == null && fruitCount != null) {

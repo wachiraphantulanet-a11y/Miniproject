@@ -1,6 +1,7 @@
 const { pool } = require('../config/db');
 const { logActivity } = require('../utils/activityLog');
 const { notifyUser } = require('../utils/notify');
+const { isBeforeDate } = require('../utils/dateOrder');
 
 const EVAL_STATUSES = ['pending_approval', 'approved', 'rejected'];
 // ต้องตรงกับ QUALITY_GRADES ใน backend/src/controllers/seedController.js (เกรดเมล็ดพันธุ์)
@@ -85,8 +86,12 @@ async function createEvaluation(req, res) {
   }
 
   try {
-    const [seedling] = await pool.query('SELECT seedling_id FROM seedlings WHERE seedling_id = ?', [seedlingId]);
+    const [seedling] = await pool.query('SELECT seedling_id, germination_date FROM seedlings WHERE seedling_id = ?', [seedlingId]);
     if (!seedling[0]) return res.status(400).json({ message: 'ไม่พบต้นกล้าที่ระบุ (seedlingId)' });
+
+    if (seedling[0].germination_date && isBeforeDate(evaluationDate, seedling[0].germination_date)) {
+      return res.status(400).json({ message: 'วันที่ประเมินต้องไม่ก่อนวันที่งอกของต้นกล้า' });
+    }
 
     const [care] = await pool.query('SELECT care_id FROM care_records WHERE seedling_id = ? LIMIT 1', [seedlingId]);
     if (!care[0]) {

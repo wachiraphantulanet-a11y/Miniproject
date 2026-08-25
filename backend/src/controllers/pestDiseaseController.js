@@ -1,6 +1,7 @@
 const { pool } = require('../config/db');
 const { logActivity } = require('../utils/activityLog');
 const { notifyRoles } = require('../utils/notify');
+const { isBeforeDate } = require('../utils/dateOrder');
 
 const ISSUE_TYPE_LABELS = { disease: 'โรค', pest: 'แมลง' };
 
@@ -87,16 +88,23 @@ async function createPestDiseaseRecord(req, res) {
 
   try {
     const [seedling] = await pool.query(
-      'SELECT seedling_id, seedling_code FROM seedlings WHERE seedling_id = ?',
+      'SELECT seedling_id, seedling_code, germination_date FROM seedlings WHERE seedling_id = ?',
       [seedlingId]
     );
     if (!seedling[0]) return res.status(400).json({ message: 'ไม่พบต้นกล้าที่ระบุ (seedlingId)' });
 
+    if (seedling[0].germination_date && isBeforeDate(foundDate, seedling[0].germination_date)) {
+      return res.status(400).json({ message: 'วันที่พบปัญหาต้องไม่ก่อนวันที่งอกของต้นกล้า' });
+    }
+
     if (careId) {
-      const [care] = await pool.query('SELECT seedling_id FROM care_records WHERE care_id = ?', [careId]);
+      const [care] = await pool.query('SELECT seedling_id, care_date FROM care_records WHERE care_id = ?', [careId]);
       if (!care[0]) return res.status(400).json({ message: 'ไม่พบบันทึกการดูแลที่ระบุ (careId)' });
       if (String(care[0].seedling_id) !== String(seedlingId)) {
         return res.status(400).json({ message: 'careId ที่ระบุไม่ใช่ของต้นกล้านี้' });
+      }
+      if (isBeforeDate(foundDate, care[0].care_date)) {
+        return res.status(400).json({ message: 'วันที่พบปัญหาต้องไม่ก่อนวันที่ดูแลที่อ้างอิง' });
       }
     }
 

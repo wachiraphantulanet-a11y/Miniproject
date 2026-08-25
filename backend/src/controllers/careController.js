@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { logActivity } = require('../utils/activityLog');
+const { isBeforeDate } = require('../utils/dateOrder');
 
 const CARE_SELECT = `
   SELECT c.care_id, c.seedling_id, sl.seedling_code, c.care_date, c.activity_type,
@@ -54,8 +55,12 @@ async function createCareRecord(req, res) {
   }
 
   try {
-    const [seedling] = await pool.query('SELECT seedling_id FROM seedlings WHERE seedling_id = ?', [seedlingId]);
+    const [seedling] = await pool.query('SELECT seedling_id, germination_date FROM seedlings WHERE seedling_id = ?', [seedlingId]);
     if (!seedling[0]) return res.status(400).json({ message: 'ไม่พบต้นกล้าที่ระบุ (seedlingId)' });
+
+    if (seedling[0].germination_date && isBeforeDate(careDate, seedling[0].germination_date)) {
+      return res.status(400).json({ message: 'วันที่ดูแลต้องไม่ก่อนวันที่งอกของต้นกล้า' });
+    }
 
     const [result] = await pool.query(
       `INSERT INTO care_records (seedling_id, care_date, activity_type, height_cm, leaf_count, growth_note, recorded_by)
@@ -84,8 +89,18 @@ async function updateCareRecord(req, res) {
   const { careDate, activityType, heightCm, leafCount, growthNote } = req.body;
 
   try {
-    const [existing] = await pool.query('SELECT care_id FROM care_records WHERE care_id = ?', [id]);
+    const [existing] = await pool.query(
+      `SELECT c.care_id, sl.germination_date
+       FROM care_records c
+       JOIN seedlings sl ON sl.seedling_id = c.seedling_id
+       WHERE c.care_id = ?`,
+      [id]
+    );
     if (!existing[0]) return res.status(404).json({ message: 'ไม่พบบันทึกการดูแลนี้' });
+
+    if (careDate && existing[0].germination_date && isBeforeDate(careDate, existing[0].germination_date)) {
+      return res.status(400).json({ message: 'วันที่ดูแลต้องไม่ก่อนวันที่งอกของต้นกล้า' });
+    }
 
     await pool.query(
       `UPDATE care_records SET

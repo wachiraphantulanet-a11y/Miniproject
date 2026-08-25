@@ -62,6 +62,13 @@ async function resolveOptions(field) {
   return field.options;
 }
 
+// เหมือน loadOptions แต่แนบวันที่ (dateKey) ของแต่ละแถวไปด้วย ใช้กับ field ที่ต้อง
+// ผูก min ของ input วันที่อีกช่องหนึ่งตามข้อมูลอ้างอิงที่เลือก (ดู field.dateMinFrom)
+async function loadOptionsWithDate(endpoint, valueKey, labelFn, dateKey) {
+  const rows = await api.get(endpoint);
+  return rows.map((r) => ({ value: r[valueKey], label: labelFn(r), date: r[dateKey] }));
+}
+
 function fieldInputHtml(field, value = '') {
   const id = `f_${field.key}`;
   const req = field.required ? 'required' : '';
@@ -132,6 +139,53 @@ function wireDynamicFields(formEl, fields) {
         if (isOther) otherInput.focus();
         else otherInput.value = '';
       });
+    });
+}
+
+// อ่านวันที่อ้างอิงจาก field อีกช่องหนึ่งในฟอร์มเดียวกัน — ถ้า field นั้นเป็น select (เช่น
+// เลือกบันทึกการผสมเกสร) ต้องมาจาก loadOptionsWithDate เพื่อให้ resolvedOptions มี option.date
+// ถ้าเป็น input วันที่ธรรมดา (เช่น วันที่เริ่มแผน) ใช้ค่าที่กรอกตรงๆ
+function readFieldDate(fields, formEl, key) {
+  const field = fields.find((f) => f.key === key);
+  const el = formEl.querySelector(`[name="${key}"]`);
+  if (!field || !el || !el.value) return null;
+  if (field.type === 'select') {
+    const opt = (field.resolvedOptions || []).find((o) => String(o.value) === el.value);
+    return opt && opt.date ? opt.date : null;
+  }
+  return el.value;
+}
+
+// ผูก min ของ input วันที่ (field.dateMinFrom = ชื่อ field อ้างอิงเดียว หรือ array หลายชื่อ)
+// ให้เท่ากับวันที่ล่าสุด (max) ของค่าที่อ้างอิง เพื่อกันไม่ให้เลือกวันที่ก่อนขั้นตอน/วันที่ก่อนหน้า
+// (เช่น วันที่สังเกตติดผล ต้องไม่ก่อนวันที่ผสมเกสรที่เลือก, วันที่สิ้นสุดแผน ต้องไม่ก่อนวันที่เริ่มแผน)
+function wireDateMinFields(formEl, fields) {
+  fields
+    .filter((f) => f.dateMinFrom)
+    .forEach((target) => {
+      const sourceKeys = Array.isArray(target.dateMinFrom) ? target.dateMinFrom : [target.dateMinFrom];
+      const targetInput = formEl.querySelector(`[name="${target.key}"]`);
+      if (!targetInput) return;
+
+      function recompute() {
+        const dates = sourceKeys.map((key) => readFieldDate(fields, formEl, key)).filter(Boolean);
+
+        if (dates.length) {
+          targetInput.min = dates.sort().slice(-1)[0];
+          if (targetInput.value && targetInput.value < targetInput.min) targetInput.value = '';
+        } else {
+          targetInput.removeAttribute('min');
+        }
+      }
+
+      sourceKeys.forEach((key) => {
+        const sourceEl = formEl.querySelector(`[name="${key}"]`);
+        if (sourceEl) {
+          sourceEl.addEventListener('change', recompute);
+          sourceEl.addEventListener('input', recompute);
+        }
+      });
+      recompute();
     });
 }
 
@@ -245,6 +299,7 @@ async function renderCrudView(container, config) {
       </form>
     `;
     wireDynamicFields(area.querySelector('#crud-create-form'), createFields);
+    wireDateMinFields(area.querySelector('#crud-create-form'), createFields);
     area.querySelector('#crud-create-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {
@@ -274,6 +329,7 @@ async function renderCrudView(container, config) {
       </form>
     `);
     wireDynamicFields(modalBox.querySelector('#crud-edit-form'), editFields);
+    wireDateMinFields(modalBox.querySelector('#crud-edit-form'), editFields);
     modalBox.querySelector('#crud-edit-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {

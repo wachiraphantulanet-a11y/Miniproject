@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { logActivity } = require('../utils/activityLog');
+const { isBeforeDate } = require('../utils/dateOrder');
 
 const SEEDLING_STATUSES = ['growing', 'ready_for_evaluation', 'passed', 'rejected', 'sold', 'disposed'];
 
@@ -59,8 +60,12 @@ async function createSeedling(req, res) {
   }
 
   try {
-    const [seed] = await pool.query('SELECT seed_id FROM seeds WHERE seed_id = ?', [seedId]);
+    const [seed] = await pool.query('SELECT seed_id, collected_date FROM seeds WHERE seed_id = ?', [seedId]);
     if (!seed[0]) return res.status(400).json({ message: 'ไม่พบบันทึกเมล็ดพันธุ์ที่ระบุ (seedId)' });
+
+    if (germinationDate && seed[0].collected_date && isBeforeDate(germinationDate, seed[0].collected_date)) {
+      return res.status(400).json({ message: 'วันที่งอกต้องไม่ก่อนวันที่เก็บเมล็ด' });
+    }
 
     const [existingCode] = await pool.query('SELECT seedling_id FROM seedlings WHERE seedling_code = ?', [seedlingCode]);
     if (existingCode[0]) return res.status(409).json({ message: 'มีรหัสต้นกล้านี้อยู่แล้วในระบบ' });
@@ -96,8 +101,18 @@ async function updateSeedling(req, res) {
   }
 
   try {
-    const [existing] = await pool.query('SELECT seedling_id FROM seedlings WHERE seedling_id = ?', [id]);
+    const [existing] = await pool.query(
+      `SELECT sl.seedling_id, s.collected_date
+       FROM seedlings sl
+       JOIN seeds s ON s.seed_id = sl.seed_id
+       WHERE sl.seedling_id = ?`,
+      [id]
+    );
     if (!existing[0]) return res.status(404).json({ message: 'ไม่พบต้นกล้านี้' });
+
+    if (germinationDate && existing[0].collected_date && isBeforeDate(germinationDate, existing[0].collected_date)) {
+      return res.status(400).json({ message: 'วันที่งอกต้องไม่ก่อนวันที่เก็บเมล็ด' });
+    }
 
     if (seedlingCode) {
       const [dup] = await pool.query('SELECT seedling_id FROM seedlings WHERE seedling_code = ? AND seedling_id <> ?', [seedlingCode, id]);

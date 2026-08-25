@@ -124,7 +124,7 @@ const resourceConfigs = {
         key: 'planId', label: 'แผนการเพาะพันธุ์ (ต้อง approved)', type: 'select', required: true,
         options: () => loadOptions('/breeding-plans?status=approved', 'plan_id', (r) => `${r.plan_code} (${r.father_tree_code} x ${r.mother_tree_code})`),
       },
-      { key: 'pollinationDate', label: 'วันที่ผสมเกสร', type: 'date', required: true },
+      { key: 'pollinationDate', label: 'วันที่ผสมเกสร', type: 'date', required: true }, // จุดเริ่มของสาย วันที่ต่อจากนี้ (สังเกตติดผล ฯลฯ) ผูก min ตามค่านี้
       { key: 'flowerCount', label: 'จำนวนดอก', type: 'number' },
       { key: 'method', label: 'วิธีการ', type: 'select-with-other', options: POLLINATION_METHOD_OPTIONS },
       { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
@@ -152,9 +152,9 @@ const resourceConfigs = {
     createFields: [
       {
         key: 'pollinationId', label: 'บันทึกการผสมเกสร', type: 'select', required: true,
-        options: () => loadOptions('/pollinations', 'pollination_id', (r) => `#${r.pollination_id} - ${r.plan_code} (${formatDateValue(r.pollination_date)})`),
+        options: () => loadOptionsWithDate('/pollinations', 'pollination_id', (r) => `#${r.pollination_id} - ${r.plan_code} (${formatDateValue(r.pollination_date)})`, 'pollination_date'),
       },
-      { key: 'observedDate', label: 'วันที่สังเกต', type: 'date', required: true },
+      { key: 'observedDate', label: 'วันที่สังเกต', type: 'date', required: true, dateMinFrom: 'pollinationId' },
       { key: 'fruitCount', label: 'จำนวนผล', type: 'number' },
       { key: 'fruitSetRate', label: 'อัตราติดผล % (เว้นว่างให้คำนวณอัตโนมัติ)', type: 'number' },
       { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
@@ -182,9 +182,9 @@ const resourceConfigs = {
     createFields: [
       {
         key: 'fruitSetId', label: 'บันทึกการติดผล', type: 'select', required: true,
-        options: () => loadOptions('/fruit-sets', 'fruit_set_id', (r) => `#${r.fruit_set_id} (${formatDateValue(r.observed_date)})`),
+        options: () => loadOptionsWithDate('/fruit-sets', 'fruit_set_id', (r) => `#${r.fruit_set_id} (${formatDateValue(r.observed_date)})`, 'observed_date'),
       },
-      { key: 'collectedDate', label: 'วันที่เก็บ', type: 'date' },
+      { key: 'collectedDate', label: 'วันที่เก็บ', type: 'date', dateMinFrom: 'fruitSetId' },
       { key: 'seedCount', label: 'จำนวนเมล็ด', type: 'number' },
       { key: 'qualityGrade', label: 'เกรด', type: 'select', options: SEED_QUALITY_GRADE_OPTIONS },
       { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
@@ -212,10 +212,10 @@ const resourceConfigs = {
     createFields: [
       {
         key: 'seedId', label: 'เมล็ดพันธุ์', type: 'select', required: true,
-        options: () => loadOptions('/seeds', 'seed_id', (r) => `#${r.seed_id} (${r.collected_date ? formatDateValue(r.collected_date) : 'ไม่ระบุวันที่'})`),
+        options: () => loadOptionsWithDate('/seeds', 'seed_id', (r) => `#${r.seed_id} (${r.collected_date ? formatDateValue(r.collected_date) : 'ไม่ระบุวันที่'})`, 'collected_date'),
       },
       { key: 'seedlingCode', label: 'รหัสต้นกล้า', type: 'text', required: true },
-      { key: 'germinationDate', label: 'วันที่งอก', type: 'date' },
+      { key: 'germinationDate', label: 'วันที่งอก', type: 'date', dateMinFrom: 'seedId' },
       { key: 'notes', label: 'หมายเหตุ', type: 'textarea' },
     ],
     editFields: [
@@ -245,9 +245,9 @@ const resourceConfigs = {
     createFields: [
       {
         key: 'seedlingId', label: 'ต้นกล้า', type: 'select', required: true,
-        options: () => loadOptions('/seedlings', 'seedling_id', (r) => r.seedling_code),
+        options: () => loadOptionsWithDate('/seedlings', 'seedling_id', (r) => r.seedling_code, 'germination_date'),
       },
-      { key: 'careDate', label: 'วันที่ดูแล', type: 'date', required: true },
+      { key: 'careDate', label: 'วันที่ดูแล', type: 'date', required: true, dateMinFrom: 'seedlingId' },
       { key: 'activityType', label: 'กิจกรรม', type: 'text' },
       { key: 'heightCm', label: 'ความสูง (ซม.)', type: 'number' },
       { key: 'leafCount', label: 'จำนวนใบ', type: 'number' },
@@ -279,13 +279,13 @@ const resourceConfigs = {
     createFields: [
       {
         key: 'seedlingId', label: 'ต้นกล้า', type: 'select', required: true,
-        options: () => loadOptions('/seedlings', 'seedling_id', (r) => r.seedling_code),
+        options: () => loadOptionsWithDate('/seedlings', 'seedling_id', (r) => r.seedling_code, 'germination_date'),
       },
       {
         key: 'careId', label: 'รอบการดูแลที่พบ (ไม่บังคับ)', type: 'select',
-        options: () => loadOptions('/care-records', 'care_id', (r) => `#${r.care_id} - ${r.seedling_code} (${formatDateValue(r.care_date)})`),
+        options: () => loadOptionsWithDate('/care-records', 'care_id', (r) => `#${r.care_id} - ${r.seedling_code} (${formatDateValue(r.care_date)})`, 'care_date'),
       },
-      { key: 'foundDate', label: 'วันที่พบ', type: 'date', required: true },
+      { key: 'foundDate', label: 'วันที่พบ', type: 'date', required: true, dateMinFrom: ['seedlingId', 'careId'] },
       {
         key: 'issueType', label: 'ประเภท', type: 'select', required: true,
         options: [{ value: 'disease', label: 'โรค' }, { value: 'pest', label: 'แมลง' }],

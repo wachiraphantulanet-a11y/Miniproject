@@ -1,6 +1,7 @@
 const { pool } = require('../config/db');
 const { logActivity } = require('../utils/activityLog');
 const { notifyUser } = require('../utils/notify');
+const { isBeforeDate } = require('../utils/dateOrder');
 
 const PLAN_STATUSES = ['draft', 'pending_approval', 'approved', 'rejected'];
 // แก้ไข/ยื่นอนุมัติได้เฉพาะตอนยังเป็น draft เท่านั้น — แผนที่ถูกปฏิเสธถือเป็นสถานะจบ (terminal)
@@ -94,6 +95,9 @@ async function createBreedingPlan(req, res) {
   if (!planCode || !fatherTreeId || !motherTreeId) {
     return res.status(400).json({ message: 'กรุณากรอกข้อมูลให้ครบ (planCode, fatherTreeId, motherTreeId)' });
   }
+  if (plannedStartDate && plannedEndDate && isBeforeDate(plannedEndDate, plannedStartDate)) {
+    return res.status(400).json({ message: 'วันที่สิ้นสุดแผนต้องไม่ก่อนวันที่เริ่มแผน' });
+  }
 
   try {
     const validationError = await validateParentTrees(fatherTreeId, motherTreeId);
@@ -140,7 +144,10 @@ async function updateBreedingPlan(req, res) {
   const { planCode, fatherTreeId, motherTreeId, objective, plannedStartDate, plannedEndDate } = req.body;
 
   try {
-    const [existing] = await pool.query('SELECT status FROM breeding_plans WHERE plan_id = ?', [id]);
+    const [existing] = await pool.query(
+      'SELECT status, planned_start_date, planned_end_date FROM breeding_plans WHERE plan_id = ?',
+      [id]
+    );
     if (!existing[0]) return res.status(404).json({ message: 'ไม่พบแผนการเพาะพันธุ์นี้' });
 
     if (!EDITABLE_STATUSES.includes(existing[0].status)) {
@@ -149,6 +156,12 @@ async function updateBreedingPlan(req, res) {
           ? 'แผนนี้ถูกปฏิเสธแล้ว แก้ไขไม่ได้ กรุณาสร้างแผนใหม่แทน'
           : 'แก้ไขแผนนี้ไม่ได้ เนื่องจากอยู่ระหว่างรออนุมัติหรืออนุมัติแล้ว',
       });
+    }
+
+    const nextStartDate = plannedStartDate || existing[0].planned_start_date;
+    const nextEndDate = plannedEndDate || existing[0].planned_end_date;
+    if (nextStartDate && nextEndDate && isBeforeDate(nextEndDate, nextStartDate)) {
+      return res.status(400).json({ message: 'วันที่สิ้นสุดแผนต้องไม่ก่อนวันที่เริ่มแผน' });
     }
 
     if (fatherTreeId || motherTreeId) {
