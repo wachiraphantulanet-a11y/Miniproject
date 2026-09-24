@@ -5,9 +5,10 @@ const { isBeforeDate } = require('../utils/dateOrder');
 const SEEDLING_STATUSES = ['growing', 'ready_for_evaluation', 'passed', 'rejected', 'sold', 'disposed'];
 
 const SEEDLING_SELECT = `
-  SELECT sl.seedling_id, sl.seed_id, sl.seedling_code, sl.germination_date,
+  SELECT sl.seedling_id, sl.seed_id, s.seed_code, sl.seedling_code, sl.germination_date,
          sl.current_status, sl.notes, sl.created_at
   FROM seedlings sl
+  JOIN seeds s ON s.seed_id = sl.seed_id
 `;
 
 /** GET /api/seedlings — filter ได้ด้วย ?seedId= และ ?status= */

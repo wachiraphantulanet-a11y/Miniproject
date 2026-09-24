@@ -572,6 +572,35 @@ button.btn-delete:hover { background: rgba(248, 113, 113, 0.1); }
   margin-bottom: 1.5rem;
 }
 
+/* แท็บของหน้ารายงาน — บาร์ที่ 1: ภาพรวมระบบ (ดูอย่างเดียว ไม่พิมพ์) / บาร์ที่ 2: รายงานตามเงื่อนไข (พิมพ์ได้) */
+.report-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.report-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-muted);
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.report-tab:hover { color: var(--color-text); }
+
+.report-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.report-tab-panel { display: none; }
+.report-tab-panel.active { display: block; }
+
 .inline-form {
   display: flex;
   flex-wrap: wrap;
@@ -587,6 +616,60 @@ button.btn-delete:hover { background: rgba(248, 113, 113, 0.1); }
   border-radius: var(--radius);
   cursor: pointer;
   font-weight: 700;
+}
+
+/* ตัวกรองรายงาน (หน้ารายงาน) — 4 ตัวกรอง: เงื่อนไขรายงาน/ช่วงวันที่/สถานะ/ผู้ใช้งาน */
+.filter-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.6rem 1rem;
+  align-items: end;
+}
+
+.filter-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.filter-field span { font-size: 0.85rem; color: var(--color-muted); }
+
+.filter-form button[type="submit"] {
+  grid-column: span 1;
+  justify-self: start;
+  align-self: end;
+}
+
+.btn-trace {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-primary);
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.btn-trace:hover { border-color: var(--color-primary); background: rgba(34, 197, 94, 0.08); }
+
+.report-total {
+  text-align: right;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-top: 0.5rem;
+}
+
+/* หัวรายงานที่แสดงเฉพาะตอนพิมพ์ */
+.print-header .print-system-name {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+
+.print-header .print-meta {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.25rem 2rem;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #000;
 }
 
 .detail-fields {
@@ -748,4 +831,85 @@ a { color: var(--color-primary); }
   color: var(--color-muted);
   font-size: 0.85rem;
   margin: 0;
+}
+
+/* กราฟสรุปสถิติ (Chart.js) — ใช้ในหน้าภาพรวมระบบและรายงานตามเงื่อนไข */
+.chart-box {
+  position: relative;
+  height: 190px;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.chart-box.small { height: 220px; max-width: 420px; }
+
+/* หัวข้อหน้ารายงาน + ปุ่มพิมพ์ */
+.report-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.report-header h2 { margin: 0; }
+
+#btn-print-dashboard, #btn-print-reports {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 600;
+  transition: border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+#btn-print-dashboard:hover, #btn-print-reports:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* หัวข้อที่แสดงเฉพาะตอนพิมพ์ (มีวันที่ออกรายงาน) */
+.print-only { display: none; }
+
+/* โหมดพิมพ์รายงาน — ซ่อนเมนู/แบบฟอร์ม/ปุ่ม เหลือเฉพาะเนื้อหารายงาน พื้นขาวตัวหนังสือดำ */
+@media print {
+  .sidebar, .sidebar-backdrop, .topbar, .no-print { display: none !important; }
+
+  body, .layout, .main-wrap, main#app {
+    background: #fff !important;
+    color: #000 !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  .print-only { display: block; }
+
+  .page-fill, .dashboard-grid { display: block !important; }
+
+  /* บาร์ที่ 2 (รายงานตามเงื่อนไข) เท่านั้นที่พิมพ์ได้ — บาร์ที่ 1 (ภาพรวมระบบ) ถูกซ่อนด้วย .no-print เสมอ */
+  #tab-conditions { display: block !important; }
+
+  .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); }
+
+  .stat-card, .dashboard-grid section, .report-section {
+    background: #fff !important;
+    border: 1px solid #ccc !important;
+    color: #000 !important;
+    break-inside: avoid;
+    margin-bottom: 0.75rem;
+  }
+
+  .stat-value, .dashboard-grid h3, .report-section h3, h2 { color: #000 !important; }
+
+  .data-table th, .data-table td { color: #000 !important; border-color: #ddd !important; }
+
+  /* ข้อ 1: ไม่ต้องนำกราฟมาแสดงตอนพิมพ์ — เหลือเฉพาะตาราง */
+  .chart-box, canvas { display: none !important; }
+
+  .report-total { color: #000 !important; }
 }

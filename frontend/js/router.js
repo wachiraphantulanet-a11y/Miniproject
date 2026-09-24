@@ -1,13 +1,13 @@
 // hash-based router แบบง่าย — ไม่ต้องพึ่ง server สำหรับ sub-route ของ frontend
 const router = {
-  routes: {}, // '/dashboard' -> { render: fn, public: bool }
+  routes: {}, // '/reports' -> { render: fn, public: bool }
 
   register(path, render, { publicRoute = false } = {}) {
     router.routes[path] = { render, publicRoute };
   },
 
   async resolve() {
-    const hash = window.location.hash.replace(/^#/, '') || '/dashboard';
+    const hash = window.location.hash.replace(/^#/, '') || '/reports';
     const path = hash.split('?')[0];
     const route = router.routes[path] || router.routes['/not-found'];
     const container = document.getElementById('app');
@@ -17,7 +17,7 @@ const router = {
       return;
     }
     if (path === '/login' && auth.isLoggedIn()) {
-      window.location.hash = '#/dashboard';
+      window.location.hash = '#/reports';
       return;
     }
 

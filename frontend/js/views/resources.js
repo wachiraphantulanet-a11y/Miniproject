@@ -144,7 +144,8 @@ const resourceConfigs = {
     idKey: 'fruit_set_id',
     listColumns: [
       { key: 'fruit_set_id', label: 'ID' },
-      { key: 'plan_id', label: 'แผน ID' },
+      { key: 'fruit_set_code', label: 'รหัสการติดผล' },
+      { key: 'plan_code', label: 'รหัสแผน' },
       { key: 'observed_date', label: 'วันที่สังเกต' },
       { key: 'fruit_count', label: 'จำนวนผล' },
       { key: 'fruit_set_rate', label: 'อัตราติดผล (%)' },
@@ -152,7 +153,7 @@ const resourceConfigs = {
     createFields: [
       {
         key: 'pollinationId', label: 'บันทึกการผสมเกสร', type: 'select', required: true,
-        options: () => loadOptionsWithDate('/pollinations', 'pollination_id', (r) => `#${r.pollination_id} - ${r.plan_code} (${formatDateValue(r.pollination_date)})`, 'pollination_date'),
+        options: () => loadOptionsWithDate('/pollinations', 'pollination_id', (r) => `${r.plan_code} (${formatDateValue(r.pollination_date)})`, 'pollination_date'),
       },
       { key: 'observedDate', label: 'วันที่สังเกต', type: 'date', required: true, dateMinFrom: 'pollinationId' },
       { key: 'fruitCount', label: 'จำนวนผล', type: 'number' },
@@ -174,7 +175,7 @@ const resourceConfigs = {
     idKey: 'seed_id',
     listColumns: [
       { key: 'seed_id', label: 'ID' },
-      { key: 'fruit_set_id', label: 'การติดผล ID' },
+      { key: 'fruit_set_code', label: 'รหัสการติดผล' },
       { key: 'collected_date', label: 'วันที่เก็บ' },
       { key: 'seed_count', label: 'จำนวนเมล็ด' },
       { key: 'quality_grade', label: 'เกรด' },
@@ -182,7 +183,7 @@ const resourceConfigs = {
     createFields: [
       {
         key: 'fruitSetId', label: 'บันทึกการติดผล', type: 'select', required: true,
-        options: () => loadOptionsWithDate('/fruit-sets', 'fruit_set_id', (r) => `#${r.fruit_set_id} (${formatDateValue(r.observed_date)})`, 'observed_date'),
+        options: () => loadOptionsWithDate('/fruit-sets', 'fruit_set_id', (r) => `${r.fruit_set_code} (${formatDateValue(r.observed_date)})`, 'observed_date'),
       },
       { key: 'collectedDate', label: 'วันที่เก็บ', type: 'date', dateMinFrom: 'fruitSetId' },
       { key: 'seedCount', label: 'จำนวนเมล็ด', type: 'number' },
@@ -205,14 +206,14 @@ const resourceConfigs = {
     listColumns: [
       { key: 'seedling_id', label: 'ID' },
       { key: 'seedling_code', label: 'รหัสต้นกล้า' },
-      { key: 'seed_id', label: 'เมล็ด ID' },
+      { key: 'seed_code', label: 'รหัสเมล็ดพันธุ์' },
       { key: 'germination_date', label: 'วันที่งอก' },
       { key: 'current_status', label: 'สถานะ', labels: SEEDLING_STATUS_LABELS },
     ],
     createFields: [
       {
         key: 'seedId', label: 'เมล็ดพันธุ์', type: 'select', required: true,
-        options: () => loadOptionsWithDate('/seeds', 'seed_id', (r) => `#${r.seed_id} (${r.collected_date ? formatDateValue(r.collected_date) : 'ไม่ระบุวันที่'})`, 'collected_date'),
+        options: () => loadOptionsWithDate('/seeds', 'seed_id', (r) => `${r.seed_code} (${r.collected_date ? formatDateValue(r.collected_date) : 'ไม่ระบุวันที่'})`, 'collected_date'),
       },
       { key: 'seedlingCode', label: 'รหัสต้นกล้า', type: 'text', required: true },
       { key: 'germinationDate', label: 'วันที่งอก', type: 'date', dateMinFrom: 'seedId' },

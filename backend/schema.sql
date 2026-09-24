@@ -151,6 +151,8 @@ CREATE TABLE pollination_records (
 
 CREATE TABLE fruit_set_records (
     fruit_set_id    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    fruit_set_code  VARCHAR(50) NULL UNIQUE,  -- รหัสอ่านง่าย สร้างอัตโนมัติหลัง INSERT จาก fruit_set_id เช่น FS-000001
+                                                -- (NULL ชั่วคราวได้ตอน INSERT แรก เพราะยังไม่รู้ id — backend เติมให้ทันทีในคำขอเดียวกัน)
     pollination_id  INT UNSIGNED NOT NULL,
     observed_date   DATE NOT NULL,
     fruit_count     INT UNSIGNED NULL,
@@ -169,6 +171,8 @@ CREATE TABLE fruit_set_records (
 -- ------------------------------------------------------------
 CREATE TABLE seeds (
     seed_id       INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    seed_code     VARCHAR(50) NULL UNIQUE,  -- รหัสอ่านง่าย สร้างอัตโนมัติหลัง INSERT จาก seed_id เช่น SD-000001
+                                              -- (NULL ชั่วคราวได้ตอน INSERT แรก เพราะยังไม่รู้ id — backend เติมให้ทันทีในคำขอเดียวกัน)
     fruit_set_id  INT UNSIGNED NOT NULL,
     collected_date DATE NULL,
     seed_count    INT UNSIGNED NULL,

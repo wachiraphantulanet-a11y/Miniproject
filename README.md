@@ -133,9 +133,10 @@ import schema.sql ตัวใหม่ (ที่มี `SET NAMES utf8mb4;` �
 | 6 (D8) | GET/POST/PUT | `/api/pest-disease-records` | login / admin,staff | บันทึกโรค/แมลง (ผูกกับต้นกล้า + care record ได้) |
 | 7 (D9) | GET/POST | `/api/quality-evaluations`, `/:id` | login / admin,staff | ประเมินคุณภาพ (เกรด A/B/C/D) — record ไม่แก้ไขหลังสร้าง (ไม่มี PUT/submit) ถ้าถูกปฏิเสธต้องสร้างรายการใหม่แทน |
 | 7 (D9) | POST | `/api/quality-evaluations/:id/decide` | admin,owner | อนุมัติ/ปฏิเสธผลประเมิน |
-| 8 | GET | `/api/reports/summary` | login | ภาพรวม dashboard ทั้งระบบ |
-| 8 | GET | `/api/reports/breeding-plans` | login | รายงานแผน (filter status/ช่วงวันที่) |
-| 8 | GET | `/api/reports/pest-disease` | login | รายงานโรค/แมลง (filter) |
+| 8 | GET | `/api/reports/summary` | login | ภาพรวมทั้งระบบ (หน้าเริ่มต้นของเมนูรายงาน) |
+| 8 | GET | `/api/reports/process-types` | login | รายชื่อประเภทรายงานที่กรองได้ (ครอบคลุมทุก process D2–D9 + ประวัติการอนุมัติแผน/ผลประเมิน) |
+| 8 | GET | `/api/reports/filter-users` | login | รายชื่อผู้ใช้งานทั้งหมด (ใช้เป็นตัวกรองที่ 4) |
+| 8 | GET | `/api/reports/process` | login | รายงานตามเงื่อนไข — query: `type` (บังคับ), `fromDate`, `toDate`, `category` (สถานะ/วิธีการผสม/เกรด/ผลการพิจารณา แล้วแต่ `type`), `role`, `userId` |
 | 8 | GET | `/api/reports/seedling-traceability`, `/:id` | login | ตรวจสอบย้อนกลับแหล่งที่มาต้นกล้าเต็มสาย |
 | — | GET | `/api/notifications` | login | รายการแจ้งเตือนของตัวเอง (ล่าสุด 100 รายการ) รองรับ `?unreadOnly=true` |
 | — | GET | `/api/notifications/unread-count` | login | จำนวนแจ้งเตือนที่ยังไม่อ่าน (ใช้ทำ badge) |

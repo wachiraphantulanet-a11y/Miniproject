@@ -1,7 +1,13 @@
 // จุดเริ่มของ frontend — ผูก route ทั้งหมด + render nav ตาม role ที่ login
 
+// เบราว์เซอร์แปะหัว/ท้ายกระดาษเอง (ชื่อหน้า + วันที่/เวลา) ตาม document.title — เว็บคุมไม่ได้โดยตรง
+// (ผู้ใช้ต้องปิดเองที่ตัวเลือก "หัวกระดาษและท้ายกระดาษ" ในหน้าต่างพิมพ์) แต่เคลียร์ title ตอนพิมพ์
+// ได้อย่างน้อยเพื่อไม่ให้ชื่อระบบไปซ้ำกับ print header ที่ทำเองในหน้ารายงาน
+const ORIGINAL_TITLE = document.title;
+window.addEventListener('beforeprint', () => { document.title = ''; });
+window.addEventListener('afterprint', () => { document.title = ORIGINAL_TITLE; });
+
 const NAV_ITEMS = [
-  { path: '/dashboard', label: 'ภาพรวม', roles: ['admin', 'staff', 'owner'] },
   { path: '/varieties', label: 'พันธุ์มะม่วง', roles: ['admin', 'staff', 'owner'] },
   { path: '/parent-trees', label: 'ต้นพ่อ-แม่พันธุ์', roles: ['admin', 'staff', 'owner'] },
   { path: '/breeding-plans', label: 'แผนการเพาะพันธุ์', roles: ['admin', 'staff', 'owner'] },
@@ -32,7 +38,7 @@ function renderNav() {
   }
 
   const user = auth.getUser();
-  const currentPath = (window.location.hash.replace(/^#/, '') || '/dashboard').split('?')[0];
+  const currentPath = (window.location.hash.replace(/^#/, '') || '/reports').split('?')[0];
 
   navEl.innerHTML = NAV_ITEMS
     .filter((item) => item.roles.includes(user.role))
@@ -72,7 +78,6 @@ document.getElementById('sidebar-toggle').addEventListener('click', toggleSideba
 document.getElementById('sidebar-backdrop').addEventListener('click', closeSidebar);
 
 router.register('/login', renderLogin, { publicRoute: true });
-router.register('/dashboard', renderDashboard);
 router.register('/varieties', renderResourceView('varieties'));
 router.register('/parent-trees', renderResourceView('parentTrees'));
 router.register('/breeding-plans', renderBreedingPlansList);

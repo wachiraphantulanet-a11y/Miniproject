@@ -55,112 +55,289 @@ async function getSummary(req, res) {
   }
 }
 
-/**
- * GET /api/reports/breeding-plans — สรุปแผนการเพาะพันธุ์ตามเงื่อนไข
- * query: status, fromDate, toDate (เทียบกับ planned_start_date)
- */
-async function getBreedingPlanReport(req, res) {
-  const { status, fromDate, toDate } = req.query;
-  const conditions = [];
-  const params = [];
+// ------------------------------------------------------------------
+// รายงานตามเงื่อนไขแบบรวมศูนย์ — ครอบคลุมทุก process (D2–D9) + ประวัติการอนุมัติ
+// filter ร่วม 5 แบบ: ประเภทรายงาน(type) / ช่วงวันที่(fromDate,toDate) / หมวดหมู่(category — สถานะ/วิธีการ/เกรด/ผลการพิจารณา
+// แล้วแต่ประเภทรายงาน ดู filterColumn/filterLabel ของแต่ละ entry) / บทบาท(role) / ผู้ใช้งาน(userId)
+//
+// หมายเหตุ: เฉพาะ planApprovals/evaluationApprovals เท่านั้นที่ userColumn ชี้ไปที่ "ผู้อนุมัติ" (decided_by
+// เป็น admin/owner) ส่วน 10 ประเภทที่เหลือ userColumn ชี้ไปที่ "ผู้บันทึกข้อมูล" (created_by/recorded_by/
+// evaluated_by เป็น admin/staff เท่านั้น เพราะ owner ไม่มีสิทธิ์บันทึกข้อมูลปฏิบัติงาน) — ใช้ดูภาระงานผู้บันทึก
+// ไม่ใช่ผู้อนุมัติ
+// ------------------------------------------------------------------
+const REPORT_TYPES = {
+  varieties: {
+    label: 'พันธุ์มะม่วง',
+    from: 'mango_varieties v JOIN users u ON u.user_id = v.created_by JOIN roles ro ON ro.role_id = u.role_id',
+    select: `v.variety_id AS id, v.variety_name, v.taste, v.color, v.avg_size_g, v.harvest_days,
+              v.created_at, u.full_name AS user_name`,
+    dateColumn: 'v.created_at',
+    userColumn: 'v.created_by',
+    filterColumn: null,
+    filterValues: [],
+    filterLabel: null,
+    orderBy: 'v.variety_id DESC',
+  },
+  parentTrees: {
+    label: 'ต้นพ่อ-แม่พันธุ์',
+    from: `parent_trees t
+           JOIN mango_varieties v ON v.variety_id = t.variety_id
+           JOIN users u ON u.user_id = t.created_by
+           JOIN roles ro ON ro.role_id = u.role_id`,
+    select: `t.tree_id AS id, t.tree_code, t.tree_type, v.variety_name, t.planted_date,
+              t.location, t.status, t.created_at, u.full_name AS user_name`,
+    dateColumn: 't.created_at',
+    userColumn: 't.created_by',
+    filterColumn: 't.status',
+    filterValues: ['active', 'inactive', 'removed'],
+    filterLabel: 'สถานะ',
+    orderBy: 't.tree_id DESC',
+  },
+  breedingPlans: {
+    label: 'แผนการเพาะพันธุ์',
+    from: `breeding_plans p
+           JOIN parent_trees f ON f.tree_id = p.father_tree_id
+           JOIN parent_trees m ON m.tree_id = p.mother_tree_id
+           JOIN users u ON u.user_id = p.created_by
+           JOIN roles ro ON ro.role_id = u.role_id`,
+    select: `p.plan_id AS id, p.plan_code, p.objective, p.planned_start_date, p.planned_end_date,
+              p.status, f.tree_code AS father_tree_code, m.tree_code AS mother_tree_code,
+              p.created_at, u.full_name AS user_name`,
+    dateColumn: 'p.created_at',
+    userColumn: 'p.created_by',
+    filterColumn: 'p.status',
+    filterValues: ['draft', 'pending_approval', 'approved', 'rejected'],
+    filterLabel: 'สถานะ',
+    orderBy: 'p.plan_id DESC',
+  },
+  pollinations: {
+    label: 'การผสมเกสร',
+    from: `pollination_records r
+           JOIN breeding_plans p ON p.plan_id = r.plan_id
+           JOIN users u ON u.user_id = r.recorded_by
+           JOIN roles ro ON ro.role_id = u.role_id`,
+    select: `r.pollination_id AS id, p.plan_code, r.pollination_date, r.flower_count,
+              r.method, r.created_at, u.full_name AS user_name`,
+    dateColumn: 'r.pollination_date',
+    userColumn: 'r.recorded_by',
+    filterColumn: 'r.method',
+    filterValues: ['มือ', 'ทางธรรมชาติ/ลม', 'แมลง/ผึ้ง'],
+    filterLabel: 'วิธีการผสม',
+    orderBy: 'r.pollination_id DESC',
+  },
+  fruitSets: {
+    label: 'การติดผล',
+    from: `fruit_set_records fs
+           JOIN pollination_records r ON r.pollination_id = fs.pollination_id
+           JOIN breeding_plans p ON p.plan_id = r.plan_id
+           JOIN users u ON u.user_id = fs.recorded_by
+           JOIN roles ro ON ro.role_id = u.role_id`,
+    select: `fs.fruit_set_id AS id, fs.fruit_set_code, p.plan_code, fs.observed_date, fs.fruit_count,
+              fs.fruit_set_rate, fs.created_at, u.full_name AS user_name`,
+    dateColumn: 'fs.observed_date',
+    userColumn: 'fs.recorded_by',
+    filterColumn: null,
+    filterValues: [],
+    filterLabel: null,
+    orderBy: 'fs.fruit_set_id DESC',
+  },
+  seeds: {
+    label: 'เมล็ดพันธุ์',
+    from: `seeds s
+           JOIN fruit_set_records fs ON fs.fruit_set_id = s.fruit_set_id
+           JOIN users u ON u.user_id = s.recorded_by
+           JOIN roles ro ON ro.role_id = u.role_id`,
+    select: `s.seed_id AS id, fs.fruit_set_code, s.collected_date, s.seed_count,
+              s.quality_grade, s.created_at, u.full_name AS user_name`,
+    dateColumn: 's.collected_date',
+    userColumn: 's.recorded_by',
+    filterColumn: 's.quality_grade',
+    filterValues: ['A', 'B', 'C', 'D'],
+    filterLabel: 'เกรด',
+    orderBy: 's.seed_id DESC',
+  },
+  seedlings: {
+    label: 'ต้นกล้า',
+    from: `seedlings sl
+           JOIN seeds s ON s.seed_id = sl.seed_id
+           JOIN users u ON u.user_id = s.recorded_by
+           JOIN roles ro ON ro.role_id = u.role_id`,
+    select: `sl.seedling_id AS id, sl.seedling_code, s.seed_code, sl.germination_date,
+              sl.current_status AS status, sl.created_at, u.full_name AS user_name`,
+    dateColumn: 'sl.created_at',
+    userColumn: 's.recorded_by',
+    filterColumn: 'sl.current_status',
+    filterValues: SEEDLING_STATUSES,
+    filterLabel: 'สถานะ',
+    orderBy: 'sl.seedling_id DESC',
+  },
+  careRecords: {
+    label: 'การดูแล/เจริญเติบโต',
+    from: `care_records c
+           JOIN seedlings sl ON sl.seedling_id = c.seedling_id
+           JOIN users u ON u.user_id = c.recorded_by
+           JOIN roles ro ON ro.role_id = u.role_id`,
+    select: `c.care_id AS id, sl.seedling_code, c.care_date, c.activity_type,
+              c.height_cm, c.leaf_count, c.created_at, u.full_name AS user_name`,
+    dateColumn: 'c.care_date',
+    userColumn: 'c.recorded_by',
+    filterColumn: null,
+    filterValues: [],
+    filterLabel: null,
+    orderBy: 'c.care_id DESC',
+  },
+  pestDisease: {
+    label: 'โรคและแมลง',
+    from: `pest_disease_records pd
+           JOIN seedlings sl ON sl.seedling_id = pd.seedling_id
+           JOIN users u ON u.user_id = pd.recorded_by
+           JOIN roles ro ON ro.role_id = u.role_id`,
+    select: `pd.record_id AS id, sl.seedling_code, pd.found_date, pd.issue_type, pd.issue_name,
+              pd.severity, pd.status, pd.created_at, u.full_name AS user_name`,
+    dateColumn: 'pd.found_date',
+    userColumn: 'pd.recorded_by',
+    filterColumn: 'pd.status',
+    filterValues: ['open', 'treated', 'resolved'],
+    filterLabel: 'สถานะ',
+    orderBy: 'pd.record_id DESC',
+  },
+  qualityEvaluations: {
+    label: 'ประเมินคุณภาพ',
+    from: `quality_evaluations e
+           JOIN seedlings sl ON sl.seedling_id = e.seedling_id
+           JOIN users u ON u.user_id = e.evaluated_by
+           JOIN roles ro ON ro.role_id = u.role_id`,
+    select: `e.evaluation_id AS id, sl.seedling_code, e.evaluation_date, e.overall_score,
+              e.overall_grade, e.status, e.created_at, u.full_name AS user_name`,
+    dateColumn: 'e.evaluation_date',
+    userColumn: 'e.evaluated_by',
+    filterColumn: 'e.status',
+    filterValues: ['pending_approval', 'approved', 'rejected'],
+    filterLabel: 'สถานะ',
+    orderBy: 'e.evaluation_id DESC',
+  },
+  planApprovals: {
+    label: 'การอนุมัติแผนการเพาะพันธุ์',
+    from: `breeding_plan_approvals a
+           JOIN breeding_plans p ON p.plan_id = a.plan_id
+           JOIN users u ON u.user_id = a.decided_by
+           JOIN roles ro ON ro.role_id = u.role_id`,
+    select: `a.approval_id AS id, p.plan_code, a.decision, a.reason, a.decided_at, u.full_name AS user_name`,
+    dateColumn: 'a.decided_at',
+    userColumn: 'a.decided_by',
+    filterColumn: 'a.decision',
+    filterValues: ['approved', 'rejected'],
+    filterLabel: 'ผลการพิจารณา',
+    orderBy: 'a.approval_id DESC',
+  },
+  evaluationApprovals: {
+    label: 'การอนุมัติผลประเมิน',
+    from: `quality_evaluation_approvals a
+           JOIN quality_evaluations e ON e.evaluation_id = a.evaluation_id
+           JOIN seedlings sl ON sl.seedling_id = e.seedling_id
+           JOIN users u ON u.user_id = a.decided_by
+           JOIN roles ro ON ro.role_id = u.role_id`,
+    select: `a.approval_id AS id, sl.seedling_code, a.decision, a.reason, a.decided_at, u.full_name AS user_name`,
+    dateColumn: 'a.decided_at',
+    userColumn: 'a.decided_by',
+    filterColumn: 'a.decision',
+    filterValues: ['approved', 'rejected'],
+    filterLabel: 'ผลการพิจารณา',
+    orderBy: 'a.approval_id DESC',
+  },
+};
 
-  if (status) {
-    conditions.push('p.status = ?');
-    params.push(status);
-  }
-  if (fromDate) {
-    conditions.push('p.planned_start_date >= ?');
-    params.push(fromDate);
-  }
-  if (toDate) {
-    conditions.push('p.planned_start_date <= ?');
-    params.push(toDate);
-  }
+/** GET /api/reports/process-types — รายการประเภทรายงานที่เลือกได้ในตัวกรองที่ 1 */
+function listProcessTypes(req, res) {
+  const types = Object.entries(REPORT_TYPES).map(([key, cfg]) => ({
+    key,
+    label: cfg.label,
+    hasFilter: !!cfg.filterColumn,
+    filterLabel: cfg.filterLabel,
+    filterValues: cfg.filterValues,
+  }));
+  return res.json(types);
+}
 
-  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-
+/** GET /api/reports/filter-users — รายชื่อผู้ใช้งานทั้งหมด สำหรับตัวกรองที่ 4 */
+async function listReportUsers(req, res) {
   try {
     const [rows] = await pool.query(
-      `SELECT p.plan_id, p.plan_code, p.status, p.planned_start_date, p.planned_end_date,
-              f.tree_code AS father_tree_code, m.tree_code AS mother_tree_code,
-              (SELECT COUNT(*) FROM pollination_records r WHERE r.plan_id = p.plan_id) AS pollination_count
-       FROM breeding_plans p
-       JOIN parent_trees f ON f.tree_id = p.father_tree_id
-       JOIN parent_trees m ON m.tree_id = p.mother_tree_id
-       ${whereClause}
-       ORDER BY p.planned_start_date DESC, p.plan_id DESC`,
-      params
+      `SELECT u.user_id, u.full_name, u.username, r.role_name
+       FROM users u JOIN roles r ON r.role_id = u.role_id
+       ORDER BY u.full_name`
     );
-
-    const [summary] = await pool.query(
-      `SELECT p.status, COUNT(*) AS total
-       FROM breeding_plans p
-       ${whereClause}
-       GROUP BY p.status`,
-      params
-    );
-
-    return res.json({ summary, plans: rows });
+    return res.json(rows);
   } catch (err) {
-    console.error('[Report] getBreedingPlanReport error:', err);
+    console.error('[Report] listReportUsers error:', err);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดภายในระบบ' });
   }
 }
 
+const VALID_ROLES = ['admin', 'staff', 'owner'];
+
 /**
- * GET /api/reports/pest-disease — สรุปปัญหาโรค/แมลงตามเงื่อนไข
- * query: issueType, severity, status, fromDate, toDate
+ * GET /api/reports/process — รายงานตามเงื่อนไข ครอบคลุมทุก process (D2–D9) + ประวัติการอนุมัติ
+ * query: type (บังคับ), fromDate, toDate, category, role, userId
+ * (category = ค่าตัวกรองที่ 3 ซึ่งความหมายแล้วแต่ประเภทรายงาน ดู REPORT_TYPES[type].filterColumn/filterLabel)
  */
-async function getPestDiseaseReport(req, res) {
-  const { issueType, severity, status, fromDate, toDate } = req.query;
+async function getProcessReport(req, res) {
+  const { type, fromDate, toDate, category, role, userId } = req.query;
+  const cfg = REPORT_TYPES[type];
+  if (!cfg) {
+    return res.status(400).json({ message: `type ต้องเป็นหนึ่งใน: ${Object.keys(REPORT_TYPES).join(', ')}` });
+  }
+
   const conditions = [];
   const params = [];
 
-  if (issueType) {
-    conditions.push('p.issue_type = ?');
-    params.push(issueType);
-  }
-  if (severity) {
-    conditions.push('p.severity = ?');
-    params.push(severity);
-  }
-  if (status) {
-    conditions.push('p.status = ?');
-    params.push(status);
-  }
   if (fromDate) {
-    conditions.push('p.found_date >= ?');
+    conditions.push(`${cfg.dateColumn} >= ?`);
     params.push(fromDate);
   }
   if (toDate) {
-    conditions.push('p.found_date <= ?');
+    conditions.push(`${cfg.dateColumn} <= ?`);
     params.push(toDate);
+  }
+  if (category) {
+    if (!cfg.filterColumn || !cfg.filterValues.includes(category)) {
+      return res.status(400).json({ message: 'ค่าตัวกรองไม่ถูกต้องสำหรับรายงานประเภทนี้' });
+    }
+    conditions.push(`${cfg.filterColumn} = ?`);
+    params.push(category);
+  }
+  if (role) {
+    if (!VALID_ROLES.includes(role)) {
+      return res.status(400).json({ message: `role ต้องเป็นหนึ่งใน: ${VALID_ROLES.join(', ')}` });
+    }
+    conditions.push('ro.role_name = ?');
+    params.push(role);
+  }
+  if (userId) {
+    conditions.push(`${cfg.userColumn} = ?`);
+    params.push(userId);
   }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   try {
     const [rows] = await pool.query(
-      `SELECT p.record_id, p.seedling_id, sl.seedling_code, p.found_date, p.issue_type,
-              p.issue_name, p.severity, p.status, p.treatment
-       FROM pest_disease_records p
-       JOIN seedlings sl ON sl.seedling_id = p.seedling_id
-       ${whereClause}
-       ORDER BY p.found_date DESC`,
+      `SELECT ${cfg.select} FROM ${cfg.from} ${whereClause} ORDER BY ${cfg.orderBy}`,
       params
     );
 
-    const [summary] = await pool.query(
-      `SELECT p.issue_type, p.severity, p.status, COUNT(*) AS total
-       FROM pest_disease_records p
-       ${whereClause}
-       GROUP BY p.issue_type, p.severity, p.status`,
-      params
-    );
+    let summary = [];
+    if (cfg.filterColumn) {
+      const [summaryRows] = await pool.query(
+        `SELECT ${cfg.filterColumn} AS value, COUNT(*) AS total FROM ${cfg.from} ${whereClause} GROUP BY ${cfg.filterColumn}`,
+        params
+      );
+      summary = summaryRows;
+    }
 
-    return res.json({ summary, records: rows });
+    return res.json({ type, label: cfg.label, total: rows.length, summary, rows });
   } catch (err) {
-    console.error('[Report] getPestDiseaseReport error:', err);
+    console.error('[Report] getProcessReport error:', err);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดภายในระบบ' });
   }
 }
@@ -264,8 +441,9 @@ async function getSeedlingTraceability(req, res) {
 
 module.exports = {
   getSummary,
-  getBreedingPlanReport,
-  getPestDiseaseReport,
+  listProcessTypes,
+  listReportUsers,
+  getProcessReport,
   listSeedlingTraceability,
   getSeedlingTraceability,
 };

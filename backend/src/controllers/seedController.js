@@ -5,9 +5,10 @@ const { isBeforeDate } = require('../utils/dateOrder');
 const QUALITY_GRADES = ['A', 'B', 'C', 'D'];
 
 const SEED_SELECT = `
-  SELECT s.seed_id, s.fruit_set_id, s.collected_date, s.seed_count, s.quality_grade,
-         s.notes, s.recorded_by, s.created_at
+  SELECT s.seed_id, s.seed_code, s.fruit_set_id, fs.fruit_set_code, s.collected_date, s.seed_count,
+         s.quality_grade, s.notes, s.recorded_by, s.created_at
   FROM seeds s
+  JOIN fruit_set_records fs ON fs.fruit_set_id = s.fruit_set_id
 `;
 
 /** GET /api/seeds — filter ได้ด้วย ?fruitSetId= */
@@ -69,15 +70,19 @@ async function createSeed(req, res) {
       [fruitSetId, collectedDate || null, seedCount || null, qualityGrade || null, notes || null, req.user.userId]
     );
 
+    // รหัสเมล็ดพันธุ์ สร้างอัตโนมัติจาก seed_id ที่เพิ่งได้ (รันต่อเนื่องเสมอ ไม่ชนกัน)
+    const seedCode = `SD-${String(result.insertId).padStart(6, '0')}`;
+    await pool.query('UPDATE seeds SET seed_code = ? WHERE seed_id = ?', [seedCode, result.insertId]);
+
     await logActivity({
       userId: req.user.userId,
       action: 'CREATE',
       tableName: 'seeds',
       recordId: result.insertId,
-      detail: `บันทึกเมล็ดพันธุ์ของ fruitSetId=${fruitSetId}`,
+      detail: `บันทึกเมล็ดพันธุ์ ${seedCode} ของ fruitSetId=${fruitSetId}`,
     });
 
-    return res.status(201).json({ seedId: result.insertId, fruitSetId });
+    return res.status(201).json({ seedId: result.insertId, seedCode, fruitSetId });
   } catch (err) {
     console.error('[Seed] createSeed error:', err);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดภายในระบบ' });

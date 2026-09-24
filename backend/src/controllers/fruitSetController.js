@@ -3,10 +3,11 @@ const { logActivity } = require('../utils/activityLog');
 const { isBeforeDate } = require('../utils/dateOrder');
 
 const FRUIT_SET_SELECT = `
-  SELECT fs.fruit_set_id, fs.pollination_id, r.plan_id, fs.observed_date, fs.fruit_count,
-         fs.fruit_set_rate, fs.notes, fs.recorded_by, fs.created_at
+  SELECT fs.fruit_set_id, fs.fruit_set_code, fs.pollination_id, r.plan_id, p.plan_code, fs.observed_date,
+         fs.fruit_count, fs.fruit_set_rate, fs.notes, fs.recorded_by, fs.created_at
   FROM fruit_set_records fs
   JOIN pollination_records r ON r.pollination_id = fs.pollination_id
+  JOIN breeding_plans p ON p.plan_id = r.plan_id
 `;
 
 function calcRate(fruitCount, flowerCount) {
@@ -79,15 +80,19 @@ async function createFruitSet(req, res) {
       [pollinationId, observedDate, fruitCount || null, fruitSetRate, notes || null, req.user.userId]
     );
 
+    // รหัสการติดผล สร้างอัตโนมัติจาก fruit_set_id ที่เพิ่งได้ (รันต่อเนื่องเสมอ ไม่ชนกัน)
+    const fruitSetCode = `FS-${String(result.insertId).padStart(6, '0')}`;
+    await pool.query('UPDATE fruit_set_records SET fruit_set_code = ? WHERE fruit_set_id = ?', [fruitSetCode, result.insertId]);
+
     await logActivity({
       userId: req.user.userId,
       action: 'CREATE',
       tableName: 'fruit_set_records',
       recordId: result.insertId,
-      detail: `บันทึกการติดผลของ pollinationId=${pollinationId}`,
+      detail: `บันทึกการติดผล ${fruitSetCode} ของ pollinationId=${pollinationId}`,
     });
 
-    return res.status(201).json({ fruitSetId: result.insertId, pollinationId, observedDate, fruitSetRate });
+    return res.status(201).json({ fruitSetId: result.insertId, fruitSetCode, pollinationId, observedDate, fruitSetRate });
   } catch (err) {
     console.error('[FruitSet] createFruitSet error:', err);
     return res.status(500).json({ message: 'เกิดข้อผิดพลาดภายในระบบ' });

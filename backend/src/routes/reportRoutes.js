@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const {
   getSummary,
-  getBreedingPlanReport,
-  getPestDiseaseReport,
+  listProcessTypes,
+  listReportUsers,
+  getProcessReport,
   listSeedlingTraceability,
   getSeedlingTraceability,
 } = require('../controllers/reportController');
@@ -14,8 +15,9 @@ const { authenticate } = require('../middleware/authMiddleware');
 router.use(authenticate);
 
 router.get('/summary', getSummary);
-router.get('/breeding-plans', getBreedingPlanReport);
-router.get('/pest-disease', getPestDiseaseReport);
+router.get('/process-types', listProcessTypes);
+router.get('/filter-users', listReportUsers);
+router.get('/process', getProcessReport);
 router.get('/seedling-traceability', listSeedlingTraceability);
 router.get('/seedling-traceability/:id', getSeedlingTraceability);
 
