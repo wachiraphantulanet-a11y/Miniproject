@@ -31,7 +31,7 @@ function renderLogin(container) {
     const formData = new FormData(e.target);
     try {
       await auth.login(formData.get('username'), formData.get('password'));
-      window.location.hash = '#/reports';
+      window.location.hash = `#${router.homePath()}`;
       router.resolve();
     } catch (err) {
       errorEl.textContent = err.message;

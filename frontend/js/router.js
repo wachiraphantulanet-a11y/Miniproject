@@ -1,13 +1,18 @@
 // hash-based router แบบง่าย — ไม่ต้องพึ่ง server สำหรับ sub-route ของ frontend
 const router = {
-  routes: {}, // '/reports' -> { render: fn, public: bool }
+  routes: {}, // '/reports' -> { render: fn, publicRoute: bool, roles: string[] | null }
 
-  register(path, render, { publicRoute = false } = {}) {
-    router.routes[path] = { render, publicRoute };
+  register(path, render, { publicRoute = false, roles = null } = {}) {
+    router.routes[path] = { render, publicRoute, roles };
+  },
+
+  // หน้าแรกหลัง login — รายงานเปิดให้เฉพาะ admin, role อื่นเริ่มที่หน้าพันธุ์มะม่วง
+  homePath() {
+    return auth.hasRole('admin') ? '/reports' : '/varieties';
   },
 
   async resolve() {
-    const hash = window.location.hash.replace(/^#/, '') || '/reports';
+    const hash = window.location.hash.replace(/^#/, '') || router.homePath();
     const path = hash.split('?')[0];
     const route = router.routes[path] || router.routes['/not-found'];
     const container = document.getElementById('app');
@@ -17,7 +22,11 @@ const router = {
       return;
     }
     if (path === '/login' && auth.isLoggedIn()) {
-      window.location.hash = '#/reports';
+      window.location.hash = `#${router.homePath()}`;
+      return;
+    }
+    if (route.roles && !auth.hasRole(...route.roles)) {
+      window.location.hash = `#${router.homePath()}`;
       return;
     }
 

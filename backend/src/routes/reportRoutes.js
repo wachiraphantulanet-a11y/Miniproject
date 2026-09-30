@@ -8,11 +8,10 @@ const {
   listSeedlingTraceability,
   getSeedlingTraceability,
 } = require('../controllers/reportController');
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, authorize } = require('../middleware/authMiddleware');
 
-// รายงานทุกแบบเป็นข้อมูลอ่านอย่างเดียว เปิดให้ทุก role ที่ login แล้วดูได้
-// (ตรงกับ DFD: ผู้ดูแลระบบ/เจ้าของสวนกำหนดเงื่อนไขรายงาน แต่ไม่ได้ห้าม staff เข้าดู)
-router.use(authenticate);
+// เมนูรายงานเปิดให้เฉพาะผู้ดูแลระบบ (admin) — staff/owner เข้าไม่ได้
+router.use(authenticate, authorize('admin'));
 
 router.get('/summary', getSummary);
 router.get('/process-types', listProcessTypes);

@@ -18,7 +18,7 @@ const NAV_ITEMS = [
   { path: '/care-records', label: 'การดูแล', roles: ['admin', 'staff', 'owner'] },
   { path: '/pest-disease', label: 'โรค/แมลง', roles: ['admin', 'staff', 'owner'] },
   { path: '/quality-evaluations', label: 'ประเมินคุณภาพ', roles: ['admin', 'staff', 'owner'] },
-  { path: '/reports', label: 'รายงาน', roles: ['admin', 'staff', 'owner'] },
+  { path: '/reports', label: 'รายงาน', roles: ['admin'] },
   { path: '/admin-dashboard', label: 'แดชบอร์ดผู้ดูแลระบบ', roles: ['admin'] },
   { path: '/users', label: 'ผู้ใช้งาน', roles: ['admin'] },
 ];
@@ -38,7 +38,7 @@ function renderNav() {
   }
 
   const user = auth.getUser();
-  const currentPath = (window.location.hash.replace(/^#/, '') || '/reports').split('?')[0];
+  const currentPath = (window.location.hash.replace(/^#/, '') || router.homePath()).split('?')[0];
 
   navEl.innerHTML = NAV_ITEMS
     .filter((item) => item.roles.includes(user.role))
@@ -90,9 +90,9 @@ router.register('/care-records', renderResourceView('careRecords'));
 router.register('/pest-disease', renderResourceView('pestDisease'));
 router.register('/quality-evaluations', renderQualityEvaluationsList);
 router.register('/quality-evaluations/detail', renderQualityEvaluationDetail);
-router.register('/reports', renderReports);
-router.register('/admin-dashboard', renderAdminDashboard);
-router.register('/users', renderUsers);
+router.register('/reports', renderReports, { roles: ['admin'] });
+router.register('/admin-dashboard', renderAdminDashboard, { roles: ['admin'] });
+router.register('/users', renderUsers, { roles: ['admin'] });
 router.register('/not-found', (container) => {
   container.innerHTML = '<p class="error">ไม่พบหน้านี้</p>';
 });
