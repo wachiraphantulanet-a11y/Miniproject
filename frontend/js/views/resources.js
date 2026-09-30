@@ -175,6 +175,7 @@ const resourceConfigs = {
     idKey: 'seed_id',
     listColumns: [
       { key: 'seed_id', label: 'ID' },
+      { key: 'seed_code', label: 'รหัสเมล็ดพันธุ์' },
       { key: 'fruit_set_code', label: 'รหัสการติดผล' },
       { key: 'collected_date', label: 'วันที่เก็บ' },
       { key: 'seed_count', label: 'จำนวนเมล็ด' },
